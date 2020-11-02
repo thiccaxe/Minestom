@@ -11,7 +11,7 @@ public class ItemStackArrayData extends DataType<ItemStack[]> {
     public void encode(@NotNull BinaryWriter writer, @NotNull ItemStack[] value) {
         writer.writeVarInt(value.length);
         for (ItemStack itemStack : value) {
-            writer.writeItemStack(itemStack);
+            writer.writeItemStack(itemStack, null);
         }
     }
 

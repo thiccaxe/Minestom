@@ -9,7 +9,7 @@ import org.jetbrains.annotations.NotNull;
 public class ItemStackData extends DataType<ItemStack> {
     @Override
     public void encode(@NotNull BinaryWriter writer, @NotNull ItemStack value) {
-        writer.writeItemStack(value);
+        writer.writeItemStack(value, null);
     }
 
     @NotNull

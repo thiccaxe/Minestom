@@ -35,7 +35,7 @@ public class EntityPotion extends ObjectEntity implements Projectile {
         if (index == 7) {
             packet.writeByte((byte) 7);
             packet.writeByte(METADATA_SLOT);
-            packet.writeItemStack(potion);
+            packet.writeItemStack(potion, null);
         }
     }
 

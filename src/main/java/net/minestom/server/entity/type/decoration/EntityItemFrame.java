@@ -42,7 +42,7 @@ public class EntityItemFrame extends ObjectEntity {
         if (index == 7) {
             packet.writeByte((byte) 7);
             packet.writeByte(METADATA_SLOT);
-            packet.writeItemStack(itemStack == null ? ItemStack.getAirItem() : itemStack);
+            packet.writeItemStack(itemStack == null ? ItemStack.getAirItem() : itemStack, null);
         } else if (index == 8) {
             packet.writeByte((byte) 8);
             packet.writeByte(METADATA_VARINT);

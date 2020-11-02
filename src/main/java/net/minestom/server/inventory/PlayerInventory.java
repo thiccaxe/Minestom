@@ -247,6 +247,7 @@ public class PlayerInventory implements InventoryModifier, InventoryClickHandler
         setSlotPacket.windowId = -1;
         setSlotPacket.slot = -1;
         setSlotPacket.itemStack = cursorItem;
+        setSlotPacket.player = player;
         player.getPlayerConnection().sendPacket(setSlotPacket);
     }
 
@@ -345,6 +346,7 @@ public class PlayerInventory implements InventoryModifier, InventoryClickHandler
         setSlotPacket.windowId = (byte) (MathUtils.isBetween(slot, 35, INVENTORY_SIZE) ? 0 : -2);
         setSlotPacket.slot = slot;
         setSlotPacket.itemStack = itemStack;
+        setSlotPacket.player = player;
         player.getPlayerConnection().sendPacket(setSlotPacket);
     }
 
@@ -364,6 +366,7 @@ public class PlayerInventory implements InventoryModifier, InventoryClickHandler
         WindowItemsPacket windowItemsPacket = new WindowItemsPacket();
         windowItemsPacket.windowId = 0;
         windowItemsPacket.items = convertedSlots;
+        windowItemsPacket.player = player;
         return windowItemsPacket;
     }
 

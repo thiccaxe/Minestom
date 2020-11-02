@@ -1,5 +1,6 @@
 package net.minestom.server.network.packet.server.play;
 
+import net.minestom.server.entity.Player;
 import net.minestom.server.item.ItemStack;
 import net.minestom.server.network.packet.server.ServerPacket;
 import net.minestom.server.network.packet.server.ServerPacketIdentifier;
@@ -7,8 +8,11 @@ import net.minestom.server.utils.binary.BinaryWriter;
 import net.minestom.server.utils.validate.Check;
 import org.jetbrains.annotations.NotNull;
 
+import javax.annotation.Nullable;
+
 public class DeclareRecipesPacket implements ServerPacket {
 
+    @NotNull
     public DeclaredRecipe[] recipes;
 
     @Override
@@ -27,7 +31,10 @@ public class DeclareRecipesPacket implements ServerPacket {
     }
 
     public abstract static class DeclaredRecipe {
+
+        @NotNull
         protected final String recipeId;
+        @NotNull
         protected final String recipeType;
 
         protected DeclaredRecipe(@NotNull String recipeId, @NotNull String recipeType) {
@@ -42,9 +49,15 @@ public class DeclareRecipesPacket implements ServerPacket {
     }
 
     public static class DeclaredShapelessCraftingRecipe extends DeclaredRecipe {
+
+        @NotNull
         private final String group;
+        @NotNull
         private final Ingredient[] ingredients;
+        @NotNull
         private final ItemStack result;
+        @Nullable
+        public Player player; // Used for the item custom display
 
         public DeclaredShapelessCraftingRecipe(
                 @NotNull String recipeId,
@@ -68,16 +81,22 @@ public class DeclareRecipesPacket implements ServerPacket {
             for (Ingredient ingredient : ingredients) {
                 ingredient.write(writer);
             }
-            writer.writeItemStack(result);
+            writer.writeItemStack(result, player);
         }
     }
 
     public static class DeclaredShapedCraftingRecipe extends DeclaredRecipe {
+
         public final int width;
         public final int height;
+        @NotNull
         private final String group;
+        @NotNull
         private final Ingredient[] ingredients;
+        @NotNull
         private final ItemStack result;
+        @Nullable
+        public Player player; // Used for the item custom display
 
         public DeclaredShapedCraftingRecipe(
                 @NotNull String recipeId,
@@ -106,14 +125,20 @@ public class DeclareRecipesPacket implements ServerPacket {
             for (Ingredient ingredient : ingredients) {
                 ingredient.write(writer);
             }
-            writer.writeItemStack(result);
+            writer.writeItemStack(result, player);
         }
     }
 
     public static class DeclaredSmeltingRecipe extends DeclaredRecipe {
+
+        @NotNull
         private final String group;
+        @NotNull
         private final Ingredient ingredient;
+        @NotNull
         private final ItemStack result;
+        @Nullable
+        public Player player;
         private final float experience;
         private final int cookingTime;
 
@@ -140,16 +165,22 @@ public class DeclareRecipesPacket implements ServerPacket {
             // Write recipe specific stuff.
             writer.writeSizedString(group);
             ingredient.write(writer);
-            writer.writeItemStack(result);
+            writer.writeItemStack(result, player);
             writer.writeFloat(experience);
             writer.writeVarInt(cookingTime);
         }
     }
 
     public static class DeclaredBlastingRecipe extends DeclaredRecipe {
+
+        @NotNull
         private final String group;
+        @NotNull
         private final Ingredient ingredient;
+        @NotNull
         private final ItemStack result;
+        @Nullable
+        public Player player; // Used for the item custom display
         private final float experience;
         private final int cookingTime;
 
@@ -176,16 +207,22 @@ public class DeclareRecipesPacket implements ServerPacket {
             // Write recipe specific stuff.
             writer.writeSizedString(group);
             ingredient.write(writer);
-            writer.writeItemStack(result);
+            writer.writeItemStack(result, player);
             writer.writeFloat(experience);
             writer.writeVarInt(cookingTime);
         }
     }
 
     public static class DeclaredSmokingRecipe extends DeclaredRecipe {
+
+        @NotNull
         private final String group;
+        @NotNull
         private final Ingredient ingredient;
+        @NotNull
         private final ItemStack result;
+        @Nullable
+        public Player player; // Used for the item custom display
         private final float experience;
         private final int cookingTime;
 
@@ -212,16 +249,22 @@ public class DeclareRecipesPacket implements ServerPacket {
             // Write recipe specific stuff.
             writer.writeSizedString(group);
             ingredient.write(writer);
-            writer.writeItemStack(result);
+            writer.writeItemStack(result, player);
             writer.writeFloat(experience);
             writer.writeVarInt(cookingTime);
         }
     }
 
     public static class DeclaredCampfireCookingRecipe extends DeclaredRecipe {
+
+        @NotNull
         private final String group;
+        @NotNull
         private final Ingredient ingredient;
+        @NotNull
         private final ItemStack result;
+        @Nullable
+        public Player player; // Used for the item custom display
         private final float experience;
         private final int cookingTime;
 
@@ -248,16 +291,22 @@ public class DeclareRecipesPacket implements ServerPacket {
             // Write recipe specific stuff.
             writer.writeSizedString(group);
             ingredient.write(writer);
-            writer.writeItemStack(result);
+            writer.writeItemStack(result, player);
             writer.writeFloat(experience);
             writer.writeVarInt(cookingTime);
         }
     }
 
     public static class DeclaredStonecutterRecipe extends DeclaredRecipe {
+
+        @NotNull
         private final String group;
+        @NotNull
         private final Ingredient ingredient;
+        @NotNull
         private final ItemStack result;
+        @Nullable
+        public Player player; // Used for the item custom display
 
         public DeclaredStonecutterRecipe(
                 @NotNull String recipeId,
@@ -278,14 +327,20 @@ public class DeclareRecipesPacket implements ServerPacket {
             // Write recipe specific stuff.
             writer.writeSizedString(group);
             ingredient.write(writer);
-            writer.writeItemStack(result);
+            writer.writeItemStack(result, player);
         }
     }
 
     public final static class DeclaredSmithingRecipe extends DeclaredRecipe {
+
+        @NotNull
         private final Ingredient base;
+        @NotNull
         private final Ingredient addition;
+        @NotNull
         private final ItemStack result;
+        @Nullable
+        public Player player; // Used for the item custom display
 
         public DeclaredSmithingRecipe(
                 @NotNull String recipeId,
@@ -306,19 +361,22 @@ public class DeclareRecipesPacket implements ServerPacket {
             // Write recipe specific stuff.
             base.write(writer);
             addition.write(writer);
-            writer.writeItemStack(result);
+            writer.writeItemStack(result, player);
         }
     }
 
     public static class Ingredient {
 
         // The count of each item should be 1
+        @NotNull
         public ItemStack[] items;
+        @Nullable
+        public Player player; // Used for the item custom display
 
         private void write(BinaryWriter writer) {
             writer.writeVarInt(items.length);
             for (ItemStack itemStack : items) {
-                writer.writeItemStack(itemStack);
+                writer.writeItemStack(itemStack, player);
             }
         }
 

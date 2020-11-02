@@ -223,7 +223,9 @@ public class Inventory implements InventoryModifier, InventoryClickHandler, View
      * Refreshes the inventory for all viewers.
      */
     public void update() {
-        sendPacketToViewers(createNewWindowItemsPacket());
+        getViewers().forEach(player -> {
+            player.getPlayerConnection().sendPacket(createNewWindowItemsPacket(player));
+        });
     }
 
     /**
@@ -238,7 +240,7 @@ public class Inventory implements InventoryModifier, InventoryClickHandler, View
             return;
 
         final PlayerConnection playerConnection = player.getPlayerConnection();
-        playerConnection.sendPacket(createNewWindowItemsPacket());
+        playerConnection.sendPacket(createNewWindowItemsPacket(player));
     }
 
     /**
@@ -309,6 +311,7 @@ public class Inventory implements InventoryModifier, InventoryClickHandler, View
         setSlotPacket.windowId = -1;
         setSlotPacket.slot = -1;
         setSlotPacket.itemStack = cursorItem;
+        setSlotPacket.player = player;
         player.getPlayerConnection().sendPacket(setSlotPacket);
 
         this.cursorPlayersItem.put(player, cursorItem);
@@ -325,11 +328,15 @@ public class Inventory implements InventoryModifier, InventoryClickHandler, View
      */
     private synchronized void safeItemInsert(int slot, @NotNull ItemStack itemStack) {
         setItemStackInternal(slot, itemStack);
-        SetSlotPacket setSlotPacket = new SetSlotPacket();
-        setSlotPacket.windowId = getWindowId();
-        setSlotPacket.slot = (short) slot;
-        setSlotPacket.itemStack = itemStack;
-        sendPacketToViewers(setSlotPacket);
+
+        getViewers().forEach(player -> {
+            SetSlotPacket setSlotPacket = new SetSlotPacket();
+            setSlotPacket.windowId = getWindowId();
+            setSlotPacket.slot = (short) slot;
+            setSlotPacket.itemStack = itemStack;
+            setSlotPacket.player = player;
+            player.getPlayerConnection().sendPacket(setSlotPacket);
+        });
     }
 
     /**
@@ -351,10 +358,11 @@ public class Inventory implements InventoryModifier, InventoryClickHandler, View
      * @return a new {@link WindowItemsPacket} packet
      */
     @NotNull
-    private WindowItemsPacket createNewWindowItemsPacket() {
+    private WindowItemsPacket createNewWindowItemsPacket(@Nullable Player player) {
         WindowItemsPacket windowItemsPacket = new WindowItemsPacket();
         windowItemsPacket.windowId = getWindowId();
         windowItemsPacket.items = getItemStacks();
+        windowItemsPacket.player = player;
         return windowItemsPacket;
     }
 
@@ -636,11 +644,14 @@ public class Inventory implements InventoryModifier, InventoryClickHandler, View
      * @param itemStack the item stack to set at the slot
      */
     private void sendSlotRefresh(short slot, ItemStack itemStack) {
-        SetSlotPacket setSlotPacket = new SetSlotPacket();
-        setSlotPacket.windowId = getWindowId();
-        setSlotPacket.slot = slot;
-        setSlotPacket.itemStack = itemStack;
-        sendPacketToViewers(setSlotPacket);
+        getViewers().forEach(player -> {
+            SetSlotPacket setSlotPacket = new SetSlotPacket();
+            setSlotPacket.windowId = getWindowId();
+            setSlotPacket.slot = slot;
+            setSlotPacket.itemStack = itemStack;
+            setSlotPacket.player = player;
+            player.getPlayerConnection().sendPacket(setSlotPacket);
+        });
     }
 
     /**

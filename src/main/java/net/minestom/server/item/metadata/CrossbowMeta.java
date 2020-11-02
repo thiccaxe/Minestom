@@ -198,7 +198,7 @@ public class CrossbowMeta implements ItemMeta {
 
         compound.setByte("Count", itemStack.getAmount());
         compound.setString("id", itemStack.getMaterial().getName());
-        NBTUtils.saveDataIntoNBT(itemStack, compound);
+        NBTUtils.saveDataIntoNBT(itemStack, compound, null);
 
         return compound;
     }

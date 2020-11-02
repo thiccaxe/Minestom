@@ -2,18 +2,23 @@ package net.minestom.server.network.packet.server.play;
 
 import net.minestom.server.advancements.FrameType;
 import net.minestom.server.chat.JsonMessage;
+import net.minestom.server.entity.Player;
 import net.minestom.server.item.ItemStack;
 import net.minestom.server.network.packet.server.ServerPacket;
 import net.minestom.server.network.packet.server.ServerPacketIdentifier;
 import net.minestom.server.utils.binary.BinaryWriter;
 import net.minestom.server.utils.binary.Writeable;
 import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
 
 public class AdvancementsPacket implements ServerPacket {
 
     public boolean resetAdvancements;
+    @NotNull
     public AdvancementMapping[] advancementMappings;
+    @NotNull
     public String[] identifiersToRemove;
+    @NotNull
     public ProgressMapping[] progressMappings;
 
     @Override
@@ -42,7 +47,9 @@ public class AdvancementsPacket implements ServerPacket {
      */
     public static class AdvancementMapping implements Writeable {
 
+        @NotNull
         public String key;
+        @NotNull
         public Advancement value;
 
         @Override
@@ -54,9 +61,14 @@ public class AdvancementsPacket implements ServerPacket {
     }
 
     public static class Advancement implements Writeable {
+
+        @Nullable
         public String parentIdentifier;
+        @Nullable
         public DisplayData displayData;
+        @NotNull
         public String[] criterions;
+        @NotNull
         public Requirement[] requirements;
 
         @Override
@@ -84,9 +96,16 @@ public class AdvancementsPacket implements ServerPacket {
     }
 
     public static class DisplayData implements Writeable {
+
+        @NotNull
         public JsonMessage title; // Only text
+        @NotNull
         public JsonMessage description; // Only text
+        @NotNull
         public ItemStack icon;
+        @Nullable
+        public Player player; // Used for the item custom display
+        @NotNull
         public FrameType frameType;
         public int flags;
         public String backgroundTexture;
@@ -97,7 +116,7 @@ public class AdvancementsPacket implements ServerPacket {
         public void write(@NotNull BinaryWriter writer) {
             writer.writeSizedString(title.toString());
             writer.writeSizedString(description.toString());
-            writer.writeItemStack(icon);
+            writer.writeItemStack(icon, player);
             writer.writeVarInt(frameType.ordinal());
             writer.writeInt(flags);
             if ((flags & 0x1) != 0) {
@@ -111,6 +130,7 @@ public class AdvancementsPacket implements ServerPacket {
 
     public static class Requirement implements Writeable {
 
+        @NotNull
         public String[] requirements;
 
         @Override
@@ -123,7 +143,10 @@ public class AdvancementsPacket implements ServerPacket {
     }
 
     public static class ProgressMapping implements Writeable {
+
+        @NotNull
         public String key;
+        @NotNull
         public AdvancementProgress value;
 
         @Override
@@ -146,7 +169,10 @@ public class AdvancementsPacket implements ServerPacket {
     }
 
     public static class Criteria implements Writeable {
+
+        @NotNull
         public String criterionIdentifier;
+        @NotNull
         public CriterionProgress criterionProgress;
 
         @Override
@@ -158,6 +184,7 @@ public class AdvancementsPacket implements ServerPacket {
     }
 
     public static class CriterionProgress implements Writeable {
+
         public boolean achieved;
         public long dateOfAchieving;
 

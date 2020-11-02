@@ -1,17 +1,23 @@
 package net.minestom.server.network.packet.server.play;
 
+import net.minestom.server.entity.Player;
 import net.minestom.server.event.item.ArmorEquipEvent;
 import net.minestom.server.item.ItemStack;
 import net.minestom.server.network.packet.server.ServerPacket;
 import net.minestom.server.network.packet.server.ServerPacketIdentifier;
 import net.minestom.server.utils.binary.BinaryWriter;
 import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
 
 public class EntityEquipmentPacket implements ServerPacket {
 
     public int entityId;
+    @NotNull
     public Slot[] slots;
+    @NotNull
     public ItemStack[] itemStacks;
+    @Nullable
+    public Player player; // Used for the item custom display
 
     @Override
     public void write(@NotNull BinaryWriter writer) {
@@ -36,7 +42,7 @@ public class EntityEquipmentPacket implements ServerPacket {
             }
 
             writer.writeByte(slotEnum);
-            writer.writeItemStack(itemStack);
+            writer.writeItemStack(itemStack, player);
         }
     }
 

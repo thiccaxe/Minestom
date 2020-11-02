@@ -1,14 +1,17 @@
 package net.minestom.server.network.packet.server.play;
 
+import net.minestom.server.entity.Player;
 import net.minestom.server.item.ItemStack;
 import net.minestom.server.network.packet.server.ServerPacket;
 import net.minestom.server.network.packet.server.ServerPacketIdentifier;
 import net.minestom.server.utils.binary.BinaryWriter;
 import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
 
 public class TradeListPacket implements ServerPacket {
 
     public int windowId;
+    @NotNull
     public Trade[] trades;
     public int villagerLevel;
     public int experience;
@@ -35,9 +38,14 @@ public class TradeListPacket implements ServerPacket {
 
     public static class Trade {
 
+        @NotNull
         public ItemStack inputItem1;
+        @NotNull
         public ItemStack result;
+        @Nullable
         public ItemStack inputItem2;
+        @Nullable
+        public Player player;
         public boolean tradeDisabled;
         public int tradeUsesNumber;
         public int maxTradeUsesNumber;
@@ -50,11 +58,11 @@ public class TradeListPacket implements ServerPacket {
         private void write(BinaryWriter writer) {
             boolean hasSecondItem = inputItem2 != null;
 
-            writer.writeItemStack(inputItem1);
-            writer.writeItemStack(result);
+            writer.writeItemStack(inputItem1, player);
+            writer.writeItemStack(result, player);
             writer.writeBoolean(hasSecondItem);
             if (hasSecondItem)
-                writer.writeItemStack(inputItem2);
+                writer.writeItemStack(inputItem2, player);
             writer.writeBoolean(tradeDisabled);
             writer.writeInt(tradeUsesNumber);
             writer.writeInt(maxTradeUsesNumber);

@@ -14,10 +14,10 @@ import net.minestom.server.event.player.*;
 import net.minestom.server.instance.Chunk;
 import net.minestom.server.instance.Instance;
 import net.minestom.server.instance.InstanceContainer;
-import net.minestom.server.instance.SharedInstance;
 import net.minestom.server.instance.block.Block;
 import net.minestom.server.inventory.Inventory;
 import net.minestom.server.inventory.InventoryType;
+import net.minestom.server.item.ItemDisplay;
 import net.minestom.server.item.ItemStack;
 import net.minestom.server.item.Material;
 import net.minestom.server.network.ConnectionManager;
@@ -43,7 +43,7 @@ public class PlayerInit {
         NoiseTestGenerator noiseTestGenerator = new NoiseTestGenerator();
         instanceContainer = MinecraftServer.getInstanceManager().createInstanceContainer(DimensionType.OVERWORLD, storageLocation);
         instanceContainer.enableAutoChunkLoad(true);
-        instanceContainer.setChunkGenerator(noiseTestGenerator);
+        instanceContainer.setChunkGenerator(chunkGeneratorDemo);
 
         // Load some chunks beforehand
         final int loopStart = -3;
@@ -75,6 +75,7 @@ public class PlayerInit {
             for (Player player : connectionManager.getOnlinePlayers()) {
                 player.sendHeaderFooter(header, footer);
             }
+
         }).repeat(10, TimeUnit.TICK).schedule();
 
         connectionManager.onPacketReceive((player, packetController, packet) -> {
@@ -144,12 +145,18 @@ public class PlayerInit {
                 Vector velocity = player.getPosition().copy().getDirection().multiply(6);
                 itemEntity.setVelocity(velocity);
 
-                Instance instance = player.getInstance();
+                /*Instance instance = player.getInstance();
                 InstanceContainer instanceContainer = instance instanceof InstanceContainer ? (InstanceContainer) instance :
                         ((SharedInstance) instance).getInstanceContainer();
-                SharedInstance sharedInstance = MinecraftServer.getInstanceManager().createSharedInstance(instanceContainer);
-                player.setInstance(sharedInstance);
+
+                InstanceContainer copiedInstance = instanceContainer.copy();
+                MinecraftServer.getInstanceManager().registerInstance(copiedInstance);
+
+                player.setInstance(copiedInstance);
                 player.sendMessage("New instance");
+
+                // free memory
+                MinecraftServer.getInstanceManager().unregisterInstance(instanceContainer);*/
 
             });
 
@@ -172,11 +179,12 @@ public class PlayerInit {
 
             player.addEventCallback(PlayerSpawnEvent.class, event -> {
                 player.setGameMode(GameMode.SURVIVAL);
-                if(event.isFirstSpawn()){
+                if (event.isFirstSpawn()) {
                     player.teleport(new Position(0, 64f, 0));
                 }
 
-                ItemStack itemStack = new ItemStack(Material.DIAMOND_PICKAXE, (byte) 64);
+                ItemStack itemStack = new ItemStack(Material.STONE, (byte) 64);
+                itemStack.setCustomDisplaySupplier(player1 -> new ItemDisplay(ColoredText.of("hey " + player.getUsername()), null));
                 player.getInventory().addItemStack(itemStack);
 
                 //player.getInventory().addItemStack(new ItemStack(Material.STONE, (byte)64));

@@ -73,6 +73,8 @@ public class ItemStack implements DataContainer {
 
     private NBTConsumer nbtConsumer;
 
+    private ItemDisplaySupplier itemDisplaySupplier;
+
     {
         if (defaultStackingRule == null)
             defaultStackingRule = DEFAULT_STACKING_RULE;
@@ -525,6 +527,7 @@ public class ItemStack implements DataContainer {
                 !attributes.isEmpty() ||
                 hideFlag != 0 ||
                 customModelData != 0 ||
+                itemDisplaySupplier != null ||
                 (itemMeta != null && itemMeta.hasNbt());
     }
 
@@ -557,6 +560,9 @@ public class ItemStack implements DataContainer {
         final Data data = getData();
         if (data != null)
             itemStack.setData(data.copy());
+
+        itemStack.itemDisplaySupplier = itemDisplaySupplier;
+
         return itemStack;
     }
 
@@ -683,24 +689,36 @@ public class ItemStack implements DataContainer {
                 .setString("id", material.getName());
         if (hasNbtTag()) {
             NBTCompound additionalTag = new NBTCompound();
-            NBTUtils.saveDataIntoNBT(this, additionalTag);
+            NBTUtils.saveDataIntoNBT(this, additionalTag, null);
             compound.set("tag", additionalTag);
         }
         return compound;
     }
 
     /**
-     * WARNING: not implemented yet.
-     * <p>
      * This is be called each time an item is serialized to be send to a player,
      * can be used to customize the display of the item based on player data.
      *
      * @param player the player
-     * @return the custom {@link ItemDisplay} for {@code player},
+     * @return the custom {@link ItemDisplay} supplier for {@code player},
      * null to use the normal item display name &amp; lore
      */
-    public ItemDisplay getCustomDisplay(Player player) {
-        throw new UnsupportedOperationException("Not implemented yet");
+    @Nullable
+    public ItemDisplay getCustomDisplay(@NotNull Player player) {
+        return itemDisplaySupplier.getDisplay(player);
+    }
+
+    /**
+     * Changes the custom display of this item.
+     * <p>
+     * We recommend sticking to constant and predictable values (no random number/string)
+     * as this could otherwise lead to weird behavior.
+     *
+     * @param itemDisplaySupplier the new item custom display supplier, null to remove it
+     * @see #getCustomDisplay(Player)
+     */
+    public void setCustomDisplaySupplier(@Nullable ItemDisplaySupplier itemDisplaySupplier) {
+        this.itemDisplaySupplier = itemDisplaySupplier;
     }
 
     // Callback events

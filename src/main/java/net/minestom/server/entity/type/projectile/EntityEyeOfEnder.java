@@ -34,7 +34,7 @@ public class EntityEyeOfEnder extends ObjectEntity implements Projectile {
         if (index == 7) {
             packet.writeByte((byte) 7);
             packet.writeByte(METADATA_SLOT);
-            packet.writeItemStack(itemStack);
+            packet.writeItemStack(itemStack, null);
         }
     }
 

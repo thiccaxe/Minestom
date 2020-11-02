@@ -4,17 +4,17 @@ import net.minestom.server.attribute.Attribute;
 import net.minestom.server.attribute.AttributeOperation;
 import net.minestom.server.chat.ChatParser;
 import net.minestom.server.chat.ColoredText;
+import net.minestom.server.entity.Player;
 import net.minestom.server.inventory.Inventory;
-import net.minestom.server.item.Enchantment;
-import net.minestom.server.item.ItemStack;
-import net.minestom.server.item.Material;
-import net.minestom.server.item.NBTConsumer;
+import net.minestom.server.item.*;
 import net.minestom.server.item.attribute.AttributeSlot;
 import net.minestom.server.item.attribute.ItemAttribute;
 import net.minestom.server.item.metadata.ItemMeta;
 import net.minestom.server.registry.Registries;
 import net.minestom.server.utils.binary.BinaryReader;
 import net.minestom.server.utils.binary.BinaryWriter;
+import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
 import org.jglrxavpok.hephaistos.nbt.*;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -35,12 +35,12 @@ public final class NBTUtils {
     }
 
     /**
-     * Loads all the items from the 'items' list into the given inventory
+     * Loads all the items from the 'items' list into the given inventory.
      *
      * @param items       the items to save
      * @param destination the inventory destination
      */
-    public static void loadAllItems(NBTList<NBTCompound> items, Inventory destination) {
+    public static void loadAllItems(@NotNull NBTList<NBTCompound> items, @NotNull Inventory destination) {
         destination.clear();
         for (NBTCompound tag : items) {
             Material item = Registries.getMaterial(tag.getString("id"));
@@ -55,13 +55,13 @@ public final class NBTUtils {
         }
     }
 
-    public static void saveAllItems(NBTList<NBTCompound> list, Inventory inventory) {
+    public static void saveAllItems(@NotNull NBTList<NBTCompound> list, @NotNull Inventory inventory) {
         for (int i = 0; i < inventory.getSize(); i++) {
             final ItemStack stack = inventory.getItemStack(i);
             NBTCompound nbt = new NBTCompound();
 
             NBTCompound tag = new NBTCompound();
-            saveDataIntoNBT(stack, tag);
+            saveDataIntoNBT(stack, tag, null);
 
             nbt.set("tag", tag);
             nbt.setByte("Slot", (byte) i);
@@ -72,7 +72,8 @@ public final class NBTUtils {
         }
     }
 
-    public static void writeEnchant(NBTCompound nbt, String listName, Map<Enchantment, Short> enchantmentMap) {
+    public static void writeEnchant(@NotNull NBTCompound nbt, @NotNull String listName,
+                                    @NotNull Map<Enchantment, Short> enchantmentMap) {
         NBTList<NBTCompound> enchantList = new NBTList<>(NBTTypes.TAG_Compound);
         for (Map.Entry<Enchantment, Short> entry : enchantmentMap.entrySet()) {
             final Enchantment enchantment = entry.getKey();
@@ -116,7 +117,7 @@ public final class NBTUtils {
         return item;
     }
 
-    public static void loadDataIntoItem(ItemStack item, NBTCompound nbt) {
+    public static void loadDataIntoItem(@NotNull ItemStack item, @NotNull NBTCompound nbt) {
         if (nbt.containsKey("Damage")) item.setDamage(nbt.getInt("Damage"));
         if (nbt.containsKey("Unbreakable")) item.setUnbreakable(nbt.getInt("Unbreakable") == 1);
         if (nbt.containsKey("HideFlags")) item.setHideFlag(nbt.getInt("HideFlags"));
@@ -197,7 +198,7 @@ public final class NBTUtils {
         }
     }
 
-    public static void writeItemStack(BinaryWriter packet, ItemStack itemStack) {
+    public static void writeItemStack(@NotNull BinaryWriter packet, @NotNull ItemStack itemStack, @Nullable Player player) {
         if (itemStack == null || itemStack.isAir()) {
             packet.writeBoolean(false);
         } else {
@@ -213,7 +214,7 @@ public final class NBTUtils {
             NBTCompound itemNBT = new NBTCompound();
 
             // Vanilla compound
-            saveDataIntoNBT(itemStack, itemNBT);
+            saveDataIntoNBT(itemStack, itemNBT, player);
 
             // Custom item nbt
             final NBTConsumer nbtConsumer = itemStack.getNBTConsumer();
@@ -226,7 +227,10 @@ public final class NBTUtils {
         }
     }
 
-    public static void saveDataIntoNBT(ItemStack itemStack, NBTCompound itemNBT) {
+    public static void saveDataIntoNBT(@NotNull ItemStack itemStack, @NotNull NBTCompound itemNBT, @Nullable Player player) {
+        final boolean hasCustomDisplay = player != null && itemStack.getCustomDisplay(player) != null;
+        final ItemDisplay customDisplay = hasCustomDisplay ? itemStack.getCustomDisplay(player) : null;
+
         // Unbreakable
         if (itemStack.isUnbreakable()) {
             itemNBT.setInt("Unbreakable", 1);
@@ -242,18 +246,22 @@ public final class NBTUtils {
         // End damage
 
         // Display
-        final boolean hasDisplayName = itemStack.hasDisplayName();
-        final boolean hasLore = itemStack.hasLore();
+        final boolean hasDisplayName = itemStack.hasDisplayName() || (hasCustomDisplay && customDisplay.hasDisplayName());
+        final boolean hasLore = itemStack.hasLore() || (hasCustomDisplay && customDisplay.hasLore());
 
         if (hasDisplayName || hasLore) {
             NBTCompound displayNBT = new NBTCompound();
             if (hasDisplayName) {
-                final String name = itemStack.getDisplayName().toString();
+                final ColoredText displayName = (hasCustomDisplay && customDisplay.hasDisplayName()) ?
+                        customDisplay.getDisplayName() : itemStack.getDisplayName();
+
+                final String name = displayName.toString();
                 displayNBT.setString("Name", name);
             }
 
             if (hasLore) {
-                final ArrayList<ColoredText> lore = itemStack.getLore();
+                final ArrayList<ColoredText> lore = (hasCustomDisplay && customDisplay.hasLore()) ?
+                        customDisplay.getLore() : itemStack.getLore();
 
                 final NBTList<NBTString> loreNBT = new NBTList<>(NBTTypes.TAG_String);
                 for (ColoredText line : lore) {

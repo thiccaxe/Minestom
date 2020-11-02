@@ -144,7 +144,7 @@ public class ItemEntity extends ObjectEntity {
         if (index == 7) {
             packet.writeByte((byte) 7);
             packet.writeByte(METADATA_SLOT);
-            packet.writeItemStack(itemStack);
+            packet.writeItemStack(itemStack, null);
         }
 
     }

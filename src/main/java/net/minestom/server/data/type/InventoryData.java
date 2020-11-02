@@ -20,7 +20,7 @@ public class InventoryData extends DataType<Inventory> {
 
         // Write all item stacks
         for (int i = 0; i < size; i++) {
-            writer.writeItemStack(value.getItemStack(i));
+            writer.writeItemStack(value.getItemStack(i), null);
         }
     }
 

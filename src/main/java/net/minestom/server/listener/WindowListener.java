@@ -11,6 +11,8 @@ import net.minestom.server.network.packet.client.play.ClientCloseWindow;
 import net.minestom.server.network.packet.client.play.ClientWindowConfirmationPacket;
 import net.minestom.server.network.packet.server.play.SetSlotPacket;
 import net.minestom.server.network.packet.server.play.WindowConfirmationPacket;
+import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
 
 public class WindowListener {
 
@@ -94,7 +96,7 @@ public class WindowListener {
      * @param player    the player to refresh the cursor item
      * @param inventory the player open inventory, null if not any (could be player inventory)
      */
-    private static void refreshCursorItem(Player player, Inventory inventory) {
+    private static void refreshCursorItem(@NotNull Player player, @Nullable Inventory inventory) {
         PlayerInventory playerInventory = player.getInventory();
 
         ItemStack cursorItem;
@@ -113,6 +115,7 @@ public class WindowListener {
         setSlotPacket.windowId = -1;
         setSlotPacket.slot = -1;
         setSlotPacket.itemStack = cursorItem;
+        setSlotPacket.player = player;
 
         player.getPlayerConnection().sendPacket(setSlotPacket);
     }
