@@ -20,7 +20,7 @@ public class BatchSetupHandler implements BatchHandler {
     private static final int CHUNK_COST = 5;
     private static final int ENTITY_COST = 5;
 
-    private ArrayList<AcquirableElement<?>> elements = new ArrayList<>();
+    private final ArrayList<AcquirableElement<?>> elements = new ArrayList<>();
     private int cost;
 
     @Override

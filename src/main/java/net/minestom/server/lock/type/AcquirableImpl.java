@@ -13,11 +13,13 @@ public class AcquirableImpl<T> implements AcquirableElement<T> {
         this.handler = new Handler();
     }
 
+    @NotNull
     @Override
     public T unsafeUnwrap() {
         return value;
     }
 
+    @NotNull
     @Override
     public Handler getHandler() {
         return handler;

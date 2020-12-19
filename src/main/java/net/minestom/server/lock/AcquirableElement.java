@@ -13,12 +13,14 @@ import java.util.function.Consumer;
 /**
  * Represents an element which can be acquired.
  * Used for synchronization purpose.
+ * <p>
+ * Implementations of this class are recommended to be immutable (or at least thread-safe).
+ * The default one is {@link net.minestom.server.lock.type.AcquirableImpl}.
  *
  * @param <T> the acquirable object type
  */
 public interface AcquirableElement<T> {
 
-    @NotNull
     default void acquire(@NotNull Consumer<T> consumer) {
         AcquisitionLock acquisitionLock = new AcquisitionLock();
 
@@ -47,7 +49,7 @@ public interface AcquirableElement<T> {
     class Handler {
 
         /**
-         * Notifies all the lock and wait for them to return using a {@link Phaser}.
+         * Notifies all the locks and wait for them to return using a {@link Phaser}.
          * <p>
          * Currently called during entities tick (TODO: chunks & instances)
          * and in {@link BatchThread.BatchRunnable#run()} after every thread-tick.
