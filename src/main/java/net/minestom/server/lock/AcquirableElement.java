@@ -30,8 +30,12 @@ public interface AcquirableElement<T> {
         } else {
             synchronized (unwrap) {
                 consumer.accept(unwrap);
-                // Notify the end of the tasks
-                acquisitionData.phaser.arriveAndDeregister();
+
+                // Notify the end of the tasks if required
+                Phaser phaser = acquisitionData.phaser;
+                if (phaser != null) {
+                    acquisitionData.phaser.arriveAndDeregister();
+                }
             }
         }
     }
@@ -85,6 +89,12 @@ public interface AcquirableElement<T> {
             final Queue<AcquisitionData> periodQueue = getPeriodQueue();
 
             final Thread currentThread = Thread.currentThread();
+
+            if (batchThread == null) {
+                // Element didn't get assigned a thread yet (meaning that the element is not part of any thread)
+                // Returns false in order to force synchronization (useful if this element is acquired multiple time)
+                return false;
+            }
 
             final boolean sameThread = System.identityHashCode(batchThread) == System.identityHashCode(currentThread);
 
