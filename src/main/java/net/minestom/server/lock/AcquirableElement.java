@@ -85,12 +85,14 @@ public interface AcquirableElement<T> {
             final Queue<AcquisitionData> periodQueue = getPeriodQueue();
 
             final Thread currentThread = Thread.currentThread();
-            final boolean isBatchThread = currentThread instanceof BatchThread;
 
-            final boolean differentThread = !isBatchThread ||
-                    (batchThread != null && System.identityHashCode(batchThread) != System.identityHashCode(currentThread));
+            final boolean sameThread = System.identityHashCode(batchThread) == System.identityHashCode(currentThread);
 
-            if (differentThread) {
+            if (sameThread) {
+                // Element can be acquired without any wait/block
+                return true;
+            } else {
+                // Element needs to be synchronized, forward a request
                 try {
                     // FIXME: multiple threads trying to acquire object from each other, they end up waiting forever
                     synchronized (periodQueue) {
@@ -102,9 +104,6 @@ public interface AcquirableElement<T> {
                 }
 
                 return false;
-            } else {
-                // Same thread, element can be acquired without any wait/block
-                return true;
             }
         }
 
