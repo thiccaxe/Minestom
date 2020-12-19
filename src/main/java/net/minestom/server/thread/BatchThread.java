@@ -8,15 +8,12 @@ import org.jetbrains.annotations.NotNull;
 
 import java.util.ArrayDeque;
 import java.util.Queue;
-import java.util.concurrent.locks.ReentrantLock;
 
 public class BatchThread extends Thread {
 
     private final BatchRunnable runnable;
 
-    private final Queue<AcquirableElement.AcquisitionLock> waitingAcquisitionQueue = Queues.newConcurrentLinkedQueue();
-
-    private final ReentrantLock queueLock = new ReentrantLock();
+    private final Queue<AcquirableElement.AcquisitionData> waitingAcquisitionQueue = Queues.newConcurrentLinkedQueue();
 
     private int cost;
 
@@ -37,13 +34,8 @@ public class BatchThread extends Thread {
     }
 
     @NotNull
-    public Queue<AcquirableElement.AcquisitionLock> getWaitingAcquisitionQueue() {
+    public Queue<AcquirableElement.AcquisitionData> getWaitingAcquisitionQueue() {
         return waitingAcquisitionQueue;
-    }
-
-    @NotNull
-    public ReentrantLock getQueueLock() {
-        return queueLock;
     }
 
     public void addRunnable(@NotNull Runnable runnable, int cost) {
