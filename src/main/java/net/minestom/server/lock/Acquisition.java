@@ -35,28 +35,55 @@ public class Acquisition {
         }, 3, 3, TimeUnit.MILLISECONDS);
     }
 
-    @Deprecated
-    public <E, T extends AcquirableElement<E>> void acquire(Collection<T> collection,
-                                                            Supplier<Collection<E>> collectionSupplier,
-                                                            Consumer<Collection<E>> consumer) {
+    public static <E, T extends AcquirableElement<E>> void acquire(Collection<T> collection,
+                                                                   Supplier<Collection<E>> collectionSupplier,
+                                                                   Consumer<Collection<E>> consumer) {
+        final Thread currentThread = Thread.currentThread();
+
         Collection<E> result = collectionSupplier.get();
 
         Map<BatchThread, List<E>> threadCacheMap = new HashMap<>();
 
         // Map the elements by their associated thread
         for (T element : collection) {
+            final E value = element.unsafeUnwrap();
             final BatchThread elementThread = element.getHandler().getBatchThread();
-            List<E> threadCacheList = threadCacheMap.computeIfAbsent(elementThread, batchThread -> new ArrayList<>());
-            threadCacheList.add(element.unsafeUnwrap());
+            if (ThreadUtils.areSame(currentThread, elementThread)) {
+                result.add(value);
+            } else {
+                List<E> threadCacheList = threadCacheMap.computeIfAbsent(elementThread, batchThread -> new ArrayList<>());
+                threadCacheList.add(value);
+            }
         }
 
         // Acquire all the threads
         {
-            // TODO
-        }
+            List<Phaser> phasers = new ArrayList<>();
 
-        // Give result
-        consumer.accept(result);
+            for (Map.Entry<BatchThread, List<E>> entry : threadCacheMap.entrySet()) {
+                final BatchThread batchThread = entry.getKey();
+                final List<E> elements = entry.getValue();
+
+                AcquisitionData data = new AcquisitionData();
+
+                acquire(currentThread, batchThread, data);
+
+                // Retrieve all elements
+                result.addAll(elements);
+
+                final Phaser phaser = data.getPhaser();
+                if (phaser != null) {
+                    phasers.add(phaser);
+                }
+            }
+
+            // Give result and deregister phasers
+            consumer.accept(result);
+            for (Phaser phaser : phasers) {
+                phaser.arriveAndDeregister();
+            }
+
+        }
     }
 
     public static <E, T extends AcquirableElement<E>> void acquireForEach(@NotNull Collection<T> collection,
