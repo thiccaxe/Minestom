@@ -1,12 +1,17 @@
 package net.minestom.server.lock;
 
+import net.minestom.server.MinecraftServer;
+import net.minestom.server.thread.BatchQueue;
 import net.minestom.server.thread.BatchThread;
 import net.minestom.server.thread.batch.BatchSetupHandler;
 import org.jetbrains.annotations.NotNull;
 
-import java.util.List;
 import java.util.Queue;
+import java.util.Set;
+import java.util.concurrent.Executors;
 import java.util.concurrent.Phaser;
+import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.TimeUnit;
 import java.util.function.Consumer;
 
 /**
@@ -54,11 +59,12 @@ public interface AcquirableElement<T> {
          * Currently called during entities tick (TODO: chunks & instances)
          * and in {@link BatchThread.BatchRunnable#run()} after every thread-tick.
          *
-         * @param acquisitionQueue the queue to empty containing the locks to notify
+         * @param queue the queue to empty containing the locks to notify
          */
-        public static void processQueue(@NotNull Queue<AcquisitionData> acquisitionQueue) {
+        public static void processQueue(@NotNull BatchQueue queue) {
             Phaser phaser = new Phaser(1);
-            synchronized (acquisitionQueue) {
+            synchronized (queue) {
+                Queue<AcquirableElement.AcquisitionData> acquisitionQueue = queue.getQueue();
                 if (acquisitionQueue.isEmpty()) {
                     return;
                 }
@@ -69,7 +75,8 @@ public interface AcquirableElement<T> {
                     phaser.register();
                 }
 
-                acquisitionQueue.notifyAll();
+                queue.setWaitingThread(null);
+                queue.notifyAll();
             }
 
             phaser.arriveAndAwaitAdvance();
@@ -77,16 +84,33 @@ public interface AcquirableElement<T> {
 
         private volatile BatchThread batchThread = null;
 
+        private static final ScheduledExecutorService scheduler = Executors.newSingleThreadScheduledExecutor();
+
+        static {
+            scheduler.scheduleAtFixedRate(() -> {
+
+                final Set<BatchThread> threads = MinecraftServer.getUpdateManager().getThreadProvider().getThreads();
+
+                for (BatchThread batchThread : threads) {
+                    final BatchThread waitingThread = (BatchThread) batchThread.getQueue().getWaitingThread();
+                    if (waitingThread != null && waitingThread.getState().equals(Thread.State.WAITING)) {
+                        processQueue(waitingThread.getQueue());
+                    }
+                }
+
+            }, 3, 3, TimeUnit.MILLISECONDS);
+        }
+
         /**
          * Checks if the {@link AcquirableElement} update tick is in the same thread as {@link Thread#currentThread()}.
-         * If yes return immediately, otherwise a lock will be created and added to {@link BatchThread#getWaitingAcquisitionQueue()}
-         * to be executed later during {@link #processQueue(Queue)}.
+         * If yes return immediately, otherwise a lock will be created and added to {@link BatchQueue#getQueue()}
+         * to be executed later during {@link #processQueue(BatchQueue)}.
          *
          * @param lock the lock used if a thread-mismatch is found
          * @return true if the acquisition didn't require any synchronization
          */
         public boolean tryAcquisition(@NotNull AcquisitionData lock) {
-            final Queue<AcquisitionData> periodQueue = getPeriodQueue();
+            final BatchQueue periodQueue = getPeriodQueue();
 
             final Thread currentThread = Thread.currentThread();
 
@@ -104,9 +128,16 @@ public interface AcquirableElement<T> {
             } else {
                 // Element needs to be synchronized, forward a request
                 try {
-                    // FIXME: multiple threads trying to acquire object from each other, they end up waiting forever
+
+                    // Prevent most of contentions, the rest in handled in the acquisition scheduled service
+                    {
+                        BatchThread batchThread = (BatchThread) currentThread;
+                        processQueue(batchThread.getQueue());
+                    }
+
                     synchronized (periodQueue) {
-                        periodQueue.add(lock);
+                        periodQueue.setWaitingThread(batchThread);
+                        periodQueue.getQueue().add(lock);
                         periodQueue.wait();
                     }
                 } catch (InterruptedException e) {
@@ -119,7 +150,7 @@ public interface AcquirableElement<T> {
 
         /**
          * Specifies in which thread this element will be updated.
-         * Currently defined before every tick for all game elements in {@link BatchSetupHandler#pushTask(List, long)}.
+         * Currently defined before every tick for all game elements in {@link BatchSetupHandler#pushTask(Set, long)}.
          *
          * @param batchThread the thread where this element will be updated
          */
@@ -131,7 +162,7 @@ public interface AcquirableElement<T> {
          * Executed during this element tick to empty the current thread acquisition queue.
          */
         public void acquisitionTick() {
-            processQueue(batchThread.getWaitingAcquisitionQueue());
+            processQueue(batchThread.getQueue());
         }
 
         /**
@@ -139,8 +170,8 @@ public interface AcquirableElement<T> {
          *
          * @return the acquisition queue
          */
-        public Queue<AcquisitionData> getPeriodQueue() {
-            return batchThread != null ? batchThread.getWaitingAcquisitionQueue() : null;
+        public BatchQueue getPeriodQueue() {
+            return batchThread != null ? batchThread.getQueue() : null;
         }
     }
 

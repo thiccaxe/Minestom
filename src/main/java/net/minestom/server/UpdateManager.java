@@ -5,12 +5,12 @@ import net.minestom.server.entity.EntityManager;
 import net.minestom.server.instance.Instance;
 import net.minestom.server.instance.InstanceManager;
 import net.minestom.server.thread.PerChunkThreadProvider;
-import net.minestom.server.thread.PerInstanceThreadProvider;
 import net.minestom.server.thread.ThreadProvider;
 import net.minestom.server.utils.validate.Check;
 import org.jetbrains.annotations.NotNull;
 
 import java.util.Queue;
+import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
@@ -96,8 +96,15 @@ public final class UpdateManager {
         // Synchronize with the update manager instance, like the signal for chunk load/unload
         synchronized (this) {
             this.threadProvider.update(tickStart);
-            this.threadProvider.notifyThreads();
-            // TODO wait execution end
+        }
+
+        CountDownLatch countDownLatch = threadProvider.notifyThreads();
+
+        // Wait tick end
+        try {
+            countDownLatch.await();
+        } catch (InterruptedException e) {
+            e.printStackTrace();
         }
     }
 

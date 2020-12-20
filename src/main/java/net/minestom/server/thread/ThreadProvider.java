@@ -5,8 +5,9 @@ import net.minestom.server.thread.batch.BatchHandler;
 import net.minestom.server.thread.batch.BatchSetupHandler;
 import org.jetbrains.annotations.NotNull;
 
-import java.util.ArrayList;
-import java.util.List;
+import java.util.HashSet;
+import java.util.Set;
+import java.util.concurrent.CountDownLatch;
 import java.util.function.Consumer;
 
 /**
@@ -17,10 +18,10 @@ import java.util.function.Consumer;
  */
 public abstract class ThreadProvider {
 
-    private List<BatchThread> threads;
+    private Set<BatchThread> threads;
 
     public ThreadProvider(int threadCount) {
-        this.threads = new ArrayList<>(threadCount);
+        this.threads = new HashSet<>(threadCount);
 
         for (int i = 0; i < threadCount; i++) {
             final BatchThread.BatchRunnable batchRunnable = new BatchThread.BatchRunnable();
@@ -79,13 +80,19 @@ public abstract class ThreadProvider {
         batchSetupHandler.pushTask(threads, time);
     }
 
-    public void notifyThreads() {
+    @NotNull
+    public Set<BatchThread> getThreads() {
+        return threads;
+    }
+
+    @NotNull
+    public CountDownLatch notifyThreads() {
+        CountDownLatch countDownLatch = new CountDownLatch(threads.size());
         for (BatchThread thread : threads) {
             final BatchThread.BatchRunnable runnable = thread.getMainRunnable();
-            synchronized (runnable) {
-                runnable.notifyAll();
-            }
+            runnable.startTick(countDownLatch);
         }
+        return countDownLatch;
     }
 
 }

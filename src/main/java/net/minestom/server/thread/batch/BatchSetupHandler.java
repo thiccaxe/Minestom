@@ -11,7 +11,6 @@ import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
 import java.util.ArrayList;
-import java.util.List;
 import java.util.Set;
 
 public class BatchSetupHandler implements BatchHandler {
@@ -47,7 +46,7 @@ public class BatchSetupHandler implements BatchHandler {
         }
     }
 
-    public void pushTask(@NotNull List<BatchThread> threads, long time) {
+    public void pushTask(@NotNull Set<BatchThread> threads, long time) {
         BatchThread fitThread = null;
         int minCost = Integer.MAX_VALUE;
 
