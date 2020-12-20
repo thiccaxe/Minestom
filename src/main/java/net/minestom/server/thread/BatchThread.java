@@ -1,7 +1,7 @@
 package net.minestom.server.thread;
 
 import net.minestom.server.MinecraftServer;
-import net.minestom.server.lock.AcquirableElement;
+import net.minestom.server.lock.Acquisition;
 import net.minestom.server.utils.validate.Check;
 import org.jetbrains.annotations.NotNull;
 
@@ -77,7 +77,7 @@ public class BatchThread extends Thread {
 
                     // Execute waiting acquisition
                     {
-                        AcquirableElement.Handler.processQueue(batchThread.getQueue());
+                        Acquisition.processQueue(batchThread.getQueue());
                     }
 
                     this.countDownLatch.countDown();

@@ -5,6 +5,7 @@ import com.google.common.util.concurrent.ThreadFactoryBuilder;
 import net.minestom.server.entity.EntityManager;
 import net.minestom.server.instance.Instance;
 import net.minestom.server.instance.InstanceManager;
+import net.minestom.server.thread.PerChunkThreadProvider;
 import net.minestom.server.thread.PerInstanceThreadProvider;
 import net.minestom.server.thread.ThreadProvider;
 import net.minestom.server.utils.validate.Check;
@@ -43,8 +44,8 @@ public final class UpdateManager {
 
         final int threadCount = 2;
 
-        //threadProvider = new PerChunkThreadProvider(threadCount);
-        threadProvider = new PerInstanceThreadProvider(threadCount);
+        threadProvider = new PerChunkThreadProvider(threadCount);
+        //threadProvider = new PerInstanceThreadProvider(threadCount);
     }
 
     /**
