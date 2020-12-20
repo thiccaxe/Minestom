@@ -53,6 +53,7 @@ public class BatchThread extends Thread {
         private volatile boolean stop;
         private BatchThread batchThread;
 
+        private volatile boolean inTick;
         private volatile CountDownLatch countDownLatch;
 
         private final Queue<Runnable> queue = new ArrayDeque<>();
@@ -67,6 +68,8 @@ public class BatchThread extends Thread {
                     continue;
 
                 synchronized (this) {
+                    this.inTick = true;
+
                     // Execute all pending runnable
                     Runnable runnable;
                     while ((runnable = queue.poll()) != null) {
@@ -83,6 +86,8 @@ public class BatchThread extends Thread {
                     this.countDownLatch.countDown();
                     this.countDownLatch = null;
 
+                    this.inTick = false;
+
                     // Wait for the next notify (game tick)
                     try {
                         wait();
@@ -96,6 +101,10 @@ public class BatchThread extends Thread {
         public synchronized void startTick(@NotNull CountDownLatch countDownLatch) {
             this.countDownLatch = countDownLatch;
             this.notifyAll();
+        }
+
+        public boolean isInTick() {
+            return inTick;
         }
 
         private void setLinkedThread(BatchThread batchThread) {

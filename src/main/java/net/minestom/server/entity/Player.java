@@ -337,7 +337,7 @@ public class Player extends LivingEntity implements CommandSender {
                 }
 
                 Acquisition.acquire(collection, ArrayList::new, entities -> {
-                    System.out.println("test " + entities.size());
+                    //System.out.println("test " + entities.size());
                 });
 
             }

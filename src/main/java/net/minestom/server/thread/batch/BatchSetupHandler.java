@@ -25,13 +25,13 @@ public class BatchSetupHandler implements BatchHandler {
     @Override
     public void updateInstance(@NotNull Instance instance, long time) {
         this.elements.add(instance.getAcquiredElement());
-        cost += INSTANCE_COST;
+        this.cost += INSTANCE_COST;
     }
 
     @Override
     public void updateChunk(@NotNull Instance instance, @NotNull Chunk chunk, long time) {
         this.elements.add(chunk.getAcquiredElement());
-        cost += CHUNK_COST;
+        this.cost += CHUNK_COST;
     }
 
     @Override
@@ -41,7 +41,7 @@ public class BatchSetupHandler implements BatchHandler {
         for (Entity entity : entities) {
             if (shouldTick(entity, condition)) {
                 this.elements.add(entity.getAcquiredElement());
-                cost += ENTITY_COST;
+                this.cost += ENTITY_COST;
             }
         }
     }
@@ -76,7 +76,7 @@ public class BatchSetupHandler implements BatchHandler {
     private Runnable createRunnable(long time) {
         return () -> {
             for (AcquirableElement<?> element : elements) {
-                Object unwrapElement = element.unsafeUnwrap();
+                final Object unwrapElement = element.unsafeUnwrap();
 
                 if (unwrapElement instanceof Instance) {
                     ((Instance) unwrapElement).tick(time);

@@ -1,6 +1,5 @@
 package net.minestom.server.lock;
 
-import net.minestom.server.thread.BatchQueue;
 import net.minestom.server.thread.BatchThread;
 import net.minestom.server.thread.batch.BatchSetupHandler;
 import org.jetbrains.annotations.NotNull;
@@ -50,7 +49,7 @@ public interface AcquirableElement<T> {
 
     class Handler {
 
-        private volatile BatchThread batchThread = null;
+        private volatile BatchThread batchThread;
 
         @Nullable
         public BatchThread getBatchThread() {
@@ -72,15 +71,6 @@ public interface AcquirableElement<T> {
          */
         public void acquisitionTick() {
             Acquisition.processQueue(batchThread.getQueue());
-        }
-
-        /**
-         * Gets the acquisition queue linked to this element's thread.
-         *
-         * @return the acquisition queue
-         */
-        public BatchQueue getPeriodQueue() {
-            return batchThread != null ? batchThread.getQueue() : null;
         }
     }
 
