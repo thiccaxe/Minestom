@@ -62,13 +62,13 @@ public interface AcquirableElement<T> {
          * @param queue the queue to empty containing the locks to notify
          */
         public static void processQueue(@NotNull BatchQueue queue) {
+            Queue<AcquirableElement.AcquisitionData> acquisitionQueue = queue.getQueue();
+
+            if (acquisitionQueue.isEmpty())
+                return;
+
             Phaser phaser = new Phaser(1);
             synchronized (queue) {
-                Queue<AcquirableElement.AcquisitionData> acquisitionQueue = queue.getQueue();
-                if (acquisitionQueue.isEmpty()) {
-                    return;
-                }
-
                 AcquisitionData lock;
                 while ((lock = acquisitionQueue.poll()) != null) {
                     lock.phaser = phaser;
@@ -84,16 +84,17 @@ public interface AcquirableElement<T> {
 
         private volatile BatchThread batchThread = null;
 
-        private static final ScheduledExecutorService scheduler = Executors.newSingleThreadScheduledExecutor();
+        private static final ScheduledExecutorService ACQUISITION_CONTENTION_SERVICE = Executors.newSingleThreadScheduledExecutor();
 
         static {
-            scheduler.scheduleAtFixedRate(() -> {
+            ACQUISITION_CONTENTION_SERVICE.scheduleAtFixedRate(() -> {
 
                 final Set<BatchThread> threads = MinecraftServer.getUpdateManager().getThreadProvider().getThreads();
 
                 for (BatchThread batchThread : threads) {
                     final BatchThread waitingThread = (BatchThread) batchThread.getQueue().getWaitingThread();
-                    if (waitingThread != null && waitingThread.getState().equals(Thread.State.WAITING)) {
+                    if (waitingThread != null && waitingThread.getState() == Thread.State.WAITING &&
+                            batchThread.getState() == Thread.State.WAITING) {
                         processQueue(waitingThread.getQueue());
                     }
                 }
@@ -110,15 +111,13 @@ public interface AcquirableElement<T> {
          * @return true if the acquisition didn't require any synchronization
          */
         public boolean tryAcquisition(@NotNull AcquisitionData lock) {
-            final BatchQueue periodQueue = getPeriodQueue();
-
-            final Thread currentThread = Thread.currentThread();
-
             if (batchThread == null) {
                 // Element didn't get assigned a thread yet (meaning that the element is not part of any thread)
                 // Returns false in order to force synchronization (useful if this element is acquired multiple time)
                 return false;
             }
+
+            final Thread currentThread = Thread.currentThread();
 
             final boolean sameThread = System.identityHashCode(batchThread) == System.identityHashCode(currentThread);
 
@@ -135,6 +134,7 @@ public interface AcquirableElement<T> {
                         processQueue(batchThread.getQueue());
                     }
 
+                    final BatchQueue periodQueue = getPeriodQueue();
                     synchronized (periodQueue) {
                         periodQueue.setWaitingThread(batchThread);
                         periodQueue.getQueue().add(lock);

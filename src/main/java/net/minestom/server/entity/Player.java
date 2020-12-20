@@ -334,7 +334,6 @@ public class Player extends LivingEntity implements CommandSender {
                 //System.out.println("test2 "+acquirablePlayer.getHandler().getPeriodIdentifier());
                 long nano = System.nanoTime();
                 //if (!p.equals(this) && p.getEntityId() == 1)
-                if(false)
                 p.getAcquiredElement().acquire(entity -> {
                     final long finalTime = System.nanoTime() - nano;
                     // System.out.println("here work " + finalTime);

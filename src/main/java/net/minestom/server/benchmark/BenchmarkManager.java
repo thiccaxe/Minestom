@@ -40,6 +40,7 @@ public final class BenchmarkManager {
         THREADS.add(THREAD_NAME_BLOCK_BATCH);
         THREADS.add(THREAD_NAME_SCHEDULER);
         THREADS.add(THREAD_NAME_TICK);
+        THREADS.add(THREAD_NAME_UPDATE);
     }
 
     private final Long2LongMap lastCpuTimeMap = new Long2LongOpenHashMap();

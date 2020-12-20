@@ -1,10 +1,11 @@
 package net.minestom.server;
 
 import com.google.common.collect.Queues;
+import com.google.common.util.concurrent.ThreadFactoryBuilder;
 import net.minestom.server.entity.EntityManager;
 import net.minestom.server.instance.Instance;
 import net.minestom.server.instance.InstanceManager;
-import net.minestom.server.thread.PerChunkThreadProvider;
+import net.minestom.server.thread.PerInstanceThreadProvider;
 import net.minestom.server.thread.ThreadProvider;
 import net.minestom.server.utils.validate.Check;
 import org.jetbrains.annotations.NotNull;
@@ -24,7 +25,9 @@ import java.util.function.LongConsumer;
  */
 public final class UpdateManager {
 
-    private final ScheduledExecutorService updateExecutionService = Executors.newSingleThreadScheduledExecutor();
+    private final ScheduledExecutorService updateExecutionService = Executors.newSingleThreadScheduledExecutor(
+            new ThreadFactoryBuilder().setNameFormat(MinecraftServer.THREAD_NAME_UPDATE).build()
+    );
 
     private volatile boolean stopRequested;
 
@@ -40,8 +43,8 @@ public final class UpdateManager {
 
         final int threadCount = 2;
 
-        threadProvider = new PerChunkThreadProvider(threadCount);
-        //threadProvider = new PerInstanceThreadProvider(threadCount);
+        //threadProvider = new PerChunkThreadProvider(threadCount);
+        threadProvider = new PerInstanceThreadProvider(threadCount);
     }
 
     /**
@@ -82,6 +85,8 @@ public final class UpdateManager {
 
             // Tick end callbacks
             doTickCallback(tickEndCallbacks, tickTime / 1000000L);
+
+            System.out.println("tick " + tickTime / 1e6D);
 
         }, 0, MinecraftServer.TICK_MS, TimeUnit.MILLISECONDS);
     }
