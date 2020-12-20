@@ -22,9 +22,10 @@ import java.util.function.Consumer;
 public interface AcquirableElement<T> {
 
     default void acquire(@NotNull Consumer<T> consumer) {
+        final Thread currentThread = Thread.currentThread();
         Acquisition.AcquisitionData data = new Acquisition.AcquisitionData();
 
-        boolean sameThread = Acquisition.acquire(getHandler().getBatchThread(), data);
+        final boolean sameThread = Acquisition.acquire(currentThread, getHandler().getBatchThread(), data);
         final T unwrap = unsafeUnwrap();
         if (sameThread) {
             consumer.accept(unwrap);

@@ -6,7 +6,6 @@ import net.minestom.server.entity.EntityManager;
 import net.minestom.server.instance.Instance;
 import net.minestom.server.instance.InstanceManager;
 import net.minestom.server.thread.PerChunkThreadProvider;
-import net.minestom.server.thread.PerInstanceThreadProvider;
 import net.minestom.server.thread.ThreadProvider;
 import net.minestom.server.utils.validate.Check;
 import org.jetbrains.annotations.NotNull;
@@ -87,7 +86,7 @@ public final class UpdateManager {
             // Tick end callbacks
             doTickCallback(tickEndCallbacks, tickTime / 1000000L);
 
-            System.out.println("tick " + tickTime / 1e6D);
+            //System.out.println("tick " + tickTime / 1e6D);
 
         }, 0, MinecraftServer.TICK_MS, TimeUnit.MILLISECONDS);
     }

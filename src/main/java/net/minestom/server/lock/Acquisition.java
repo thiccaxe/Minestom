@@ -3,6 +3,7 @@ package net.minestom.server.lock;
 import net.minestom.server.MinecraftServer;
 import net.minestom.server.thread.BatchQueue;
 import net.minestom.server.thread.BatchThread;
+import net.minestom.server.utils.thread.ThreadUtils;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
@@ -34,6 +35,7 @@ public class Acquisition {
         }, 3, 3, TimeUnit.MILLISECONDS);
     }
 
+    @Deprecated
     public <E, T extends AcquirableElement<E>> void acquire(Collection<T> collection,
                                                             Supplier<Collection<E>> collectionSupplier,
                                                             Consumer<Collection<E>> consumer) {
@@ -57,6 +59,51 @@ public class Acquisition {
         consumer.accept(result);
     }
 
+    public static <E, T extends AcquirableElement<E>> void acquireForEach(@NotNull Collection<T> collection,
+                                                                          @NotNull Consumer<E> consumer) {
+
+        final Thread currentThread = Thread.currentThread();
+        Map<BatchThread, List<E>> threadCacheMap = new HashMap<>();
+
+        // Map the elements by their associated thread
+        for (T element : collection) {
+            final E value = element.unsafeUnwrap();
+            final BatchThread elementThread = element.getHandler().getBatchThread();
+            if (ThreadUtils.areSame(currentThread, elementThread)) {
+                // The element is managed in the current thread, consumer can be immediately called
+                consumer.accept(value);
+            } else {
+                // The element is manager in a different thread, cache it
+                List<E> threadCacheList = threadCacheMap.computeIfAbsent(elementThread, batchThread -> new ArrayList<>());
+                threadCacheList.add(value);
+            }
+        }
+
+        // Acquire all the threads one by one
+        {
+            for (Map.Entry<BatchThread, List<E>> entry : threadCacheMap.entrySet()) {
+                final BatchThread batchThread = entry.getKey();
+                final List<E> elements = entry.getValue();
+
+                AcquisitionData data = new AcquisitionData();
+
+                acquire(currentThread, batchThread, data);
+
+                // Execute the consumer for all waiting elements
+                for (E element : elements) {
+                    synchronized (element) {
+                        consumer.accept(element);
+                    }
+                }
+
+                final Phaser phaser = data.getPhaser();
+                if (phaser != null) {
+                    phaser.arriveAndDeregister();
+                }
+            }
+        }
+    }
+
     /**
      * Checks if the {@link AcquirableElement} update tick is in the same thread as {@link Thread#currentThread()}.
      * If yes return immediately, otherwise a lock will be created and added to {@link BatchQueue#getQueue()}
@@ -64,17 +111,16 @@ public class Acquisition {
      *
      * @param data the object containing data about the acquisition
      * @return true if the acquisition didn't require any synchronization
+     * @see #processQueue(BatchQueue)
      */
-    public static boolean acquire(@Nullable BatchThread elementThread, @NotNull AcquisitionData data) {
+    protected static boolean acquire(@NotNull Thread currentThread, @Nullable BatchThread elementThread, @NotNull AcquisitionData data) {
         if (elementThread == null) {
             // Element didn't get assigned a thread yet (meaning that the element is not part of any thread)
             // Returns false in order to force synchronization (useful if this element is acquired multiple time)
             return false;
         }
 
-        final Thread currentThread = Thread.currentThread();
-
-        final boolean sameThread = System.identityHashCode(elementThread) == System.identityHashCode(currentThread);
+        final boolean sameThread = ThreadUtils.areSame(currentThread, elementThread);
 
         if (sameThread) {
             // Element can be acquired without any wait/block
@@ -110,6 +156,7 @@ public class Acquisition {
      * and in {@link BatchThread.BatchRunnable#run()} after every thread-tick.
      *
      * @param queue the queue to empty containing the locks to notify
+     * @see #acquire(Thread, BatchThread, AcquisitionData)
      */
     public static void processQueue(@NotNull BatchQueue queue) {
         Queue<AcquisitionData> acquisitionQueue = queue.getQueue();

@@ -30,6 +30,8 @@ import net.minestom.server.inventory.PlayerInventory;
 import net.minestom.server.item.ItemStack;
 import net.minestom.server.item.Material;
 import net.minestom.server.listener.PlayerDiggingListener;
+import net.minestom.server.lock.AcquirableElement;
+import net.minestom.server.lock.Acquisition;
 import net.minestom.server.network.ConnectionManager;
 import net.minestom.server.network.PlayerProvider;
 import net.minestom.server.network.packet.client.ClientPlayPacket;
@@ -328,7 +330,19 @@ public class Player extends LivingEntity implements CommandSender {
         {
             //System.out.println("hey " + hashCode()+" "+acquirablePlayer.getHandler().getPeriodIdentifier());
 
-            if (getEntityId() == 50)
+            if (true) {
+                Collection<AcquirableElement<Entity>> collection = new ArrayList<>();
+                for (Player p : MinecraftServer.getConnectionManager().getOnlinePlayers()) {
+                    collection.add(p.getAcquiredElement());
+                }
+
+                Acquisition.acquireForEach(collection, entity -> {
+                    //System.out.println("test "+entity.getEntityId());
+                });
+
+            }
+
+            if (false) {
                 for (Player p : MinecraftServer.getConnectionManager().getOnlinePlayers()) {
                     //System.out.println("THREAD "+Thread.currentThread().getName());
                     //System.out.println("test "+p.getAcquiredElement().getHandler().getPeriodIdentifier());
@@ -342,18 +356,9 @@ public class Player extends LivingEntity implements CommandSender {
                         //System.out.println("get player id " + entity.getEntityId());
                     });
                 }
+            }
 
-            //System.out.println("test " + hashCode() + " " + acquirablePlayer.getHandler().getPeriodIdentifier() + " " + Thread.currentThread().getName());
         }
-
-        /*System.out.println("hey ");
-        long nano = System.nanoTime();
-        getAcquiredElement().acquire(player -> {
-            //System.out.println("I got the player, this operation can be blocking or not depending on where it is called");
-            //System.out.println("Will execute directly if possible, or wait ");
-            System.out.println("time " + (System.nanoTime() - nano));
-        });
-        System.out.println("hey it's sync");*/
 
         // Network tick
         this.playerConnection.update();
