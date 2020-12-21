@@ -2,6 +2,7 @@ package net.minestom.server.entity;
 
 import com.google.common.collect.Queues;
 import net.minestom.server.MinecraftServer;
+import net.minestom.server.Tickable;
 import net.minestom.server.Viewable;
 import net.minestom.server.chat.ColoredText;
 import net.minestom.server.collision.BoundingBox;
@@ -19,7 +20,7 @@ import net.minestom.server.instance.Chunk;
 import net.minestom.server.instance.Instance;
 import net.minestom.server.instance.InstanceManager;
 import net.minestom.server.instance.block.CustomBlock;
-import net.minestom.server.lock.AcquirableElement;
+import net.minestom.server.lock.Acquirable;
 import net.minestom.server.lock.LockedElement;
 import net.minestom.server.lock.type.AcquirableEntity;
 import net.minestom.server.network.packet.server.play.*;
@@ -53,7 +54,7 @@ import java.util.function.Consumer;
  * <p>
  * To create your own entity you probably want to extends {@link ObjectEntity} or {@link EntityCreature} instead.
  */
-public abstract class Entity implements Viewable, LockedElement<Entity>, EventHandler, DataContainer, PermissionHandler {
+public abstract class Entity implements Tickable, Viewable, LockedElement<Entity>, EventHandler, DataContainer, PermissionHandler {
 
     private static final Map<Integer, Entity> entityById = new ConcurrentHashMap<>();
     private static final AtomicInteger lastEntityId = new AtomicInteger();
@@ -357,6 +358,7 @@ public abstract class Entity implements Viewable, LockedElement<Entity>, EventHa
      *
      * @param time the update time in milliseconds
      */
+    @Override
     public void tick(long time) {
         if (instance == null)
             return;
@@ -613,7 +615,7 @@ public abstract class Entity implements Viewable, LockedElement<Entity>, EventHa
 
     @NotNull
     @Override
-    public AcquirableElement<Entity> getAcquiredElement() {
+    public Acquirable<Entity> getAcquiredElement() {
         return acquirableEntity;
     }
 

@@ -30,7 +30,7 @@ import net.minestom.server.inventory.PlayerInventory;
 import net.minestom.server.item.ItemStack;
 import net.minestom.server.item.Material;
 import net.minestom.server.listener.PlayerDiggingListener;
-import net.minestom.server.lock.AcquirableElement;
+import net.minestom.server.lock.Acquirable;
 import net.minestom.server.lock.Acquisition;
 import net.minestom.server.network.ConnectionManager;
 import net.minestom.server.network.PlayerProvider;
@@ -331,7 +331,7 @@ public class Player extends LivingEntity implements CommandSender {
             //System.out.println("hey " + hashCode()+" "+acquirablePlayer.getHandler().getPeriodIdentifier());
 
             if (true) {
-                Collection<AcquirableElement<Entity>> collection = new ArrayList<>();
+                Collection<Acquirable<Entity>> collection = new ArrayList<>();
                 for (Player p : MinecraftServer.getConnectionManager().getOnlinePlayers()) {
                     collection.add(p.getAcquiredElement());
                 }

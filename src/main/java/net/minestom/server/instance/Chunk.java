@@ -14,7 +14,7 @@ import net.minestom.server.instance.batch.ChunkBatch;
 import net.minestom.server.instance.block.Block;
 import net.minestom.server.instance.block.BlockManager;
 import net.minestom.server.instance.block.CustomBlock;
-import net.minestom.server.lock.AcquirableElement;
+import net.minestom.server.lock.Acquirable;
 import net.minestom.server.lock.LockedElement;
 import net.minestom.server.lock.type.AcquirableChunk;
 import net.minestom.server.network.packet.server.play.ChunkDataPacket;
@@ -500,7 +500,7 @@ public abstract class Chunk implements Viewable, LockedElement<Chunk>, DataConta
 
     @NotNull
     @Override
-    public AcquirableElement<Chunk> getAcquiredElement() {
+    public Acquirable<Chunk> getAcquiredElement() {
         return acquirableChunk;
     }
 

@@ -35,9 +35,9 @@ public final class Acquisition {
         }, 3, 3, TimeUnit.MILLISECONDS);
     }
 
-    public static <E, T extends AcquirableElement<E>> void acquire(Collection<T> collection,
-                                                                   Supplier<Collection<E>> collectionSupplier,
-                                                                   Consumer<Collection<E>> consumer) {
+    public static <E, T extends Acquirable<E>> void acquire(Collection<T> collection,
+                                                            Supplier<Collection<E>> collectionSupplier,
+                                                            Consumer<Collection<E>> consumer) {
         final Thread currentThread = Thread.currentThread();
         Collection<E> result = collectionSupplier.get();
 
@@ -73,8 +73,8 @@ public final class Acquisition {
         }
     }
 
-    public static <E, T extends AcquirableElement<E>> void acquireForEach(@NotNull Collection<T> collection,
-                                                                          @NotNull Consumer<E> consumer) {
+    public static <E, T extends Acquirable<E>> void acquireForEach(@NotNull Collection<T> collection,
+                                                                   @NotNull Consumer<E> consumer) {
 
         final Thread currentThread = Thread.currentThread();
         Map<BatchThread, List<E>> threadCacheMap = retrieveThreadMap(collection, currentThread, consumer);
@@ -135,7 +135,7 @@ public final class Acquisition {
     }
 
     /**
-     * Checks if the {@link AcquirableElement} update tick is in the same thread as {@link Thread#currentThread()}.
+     * Checks if the {@link Acquirable} update tick is in the same thread as {@link Thread#currentThread()}.
      * If yes return immediately, otherwise a lock will be created and added to {@link BatchQueue#getQueue()}
      * to be executed later during {@link #processQueue(BatchQueue)}.
      *
@@ -184,9 +184,9 @@ public final class Acquisition {
         }
     }
 
-    private static <E, T extends AcquirableElement<E>> Map<BatchThread, List<E>> retrieveThreadMap(@NotNull Collection<T> collection,
-                                                                                                   @NotNull Thread currentThread,
-                                                                                                   @NotNull Consumer<E> consumer) {
+    private static <E, T extends Acquirable<E>> Map<BatchThread, List<E>> retrieveThreadMap(@NotNull Collection<T> collection,
+                                                                                            @NotNull Thread currentThread,
+                                                                                            @NotNull Consumer<E> consumer) {
         Map<BatchThread, List<E>> threadCacheMap = new HashMap<>();
 
         for (T element : collection) {

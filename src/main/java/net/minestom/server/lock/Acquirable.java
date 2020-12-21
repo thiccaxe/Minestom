@@ -18,7 +18,7 @@ import java.util.function.Consumer;
  *
  * @param <T> the acquirable object type
  */
-public interface AcquirableElement<T> {
+public interface Acquirable<T> {
 
     default void acquire(@NotNull Consumer<T> consumer) {
         final Thread currentThread = Thread.currentThread();
@@ -31,12 +31,11 @@ public interface AcquirableElement<T> {
         } else {
             synchronized (unwrap) {
                 consumer.accept(unwrap);
-
-                // Notify the end of the tasks if required
-                Phaser phaser = data.getPhaser();
-                if (phaser != null) {
-                    phaser.arriveAndDeregister();
-                }
+            }
+            // Notify the end of the task if required
+            Phaser phaser = data.getPhaser();
+            if (phaser != null) {
+                phaser.arriveAndDeregister();
             }
         }
     }

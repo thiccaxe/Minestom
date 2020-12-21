@@ -195,7 +195,7 @@ public class PlayerInit {
         globalEventHandler.addEventCallback(PlayerLoginEvent.class, event -> {
             final Player player = event.getPlayer();
 
-            event.setSpawningInstance(instanceContainer);
+            event.setSpawningInstance(MinecraftServer.getInstanceManager().createSharedInstance(instanceContainer));
             int x = Math.abs(ThreadLocalRandom.current().nextInt()) % 1000 - 250;
             int z = Math.abs(ThreadLocalRandom.current().nextInt()) % 1000 - 250;
             player.setRespawnPoint(new Position(0, 42f, 0));
