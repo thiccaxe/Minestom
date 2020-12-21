@@ -24,6 +24,7 @@ import net.minestom.server.inventory.InventoryType;
 import net.minestom.server.inventory.PlayerInventory;
 import net.minestom.server.item.ItemStack;
 import net.minestom.server.item.Material;
+import net.minestom.server.lock.Acquirable;
 import net.minestom.server.network.ConnectionManager;
 import net.minestom.server.network.packet.server.play.PlayerListHeaderAndFooterPacket;
 import net.minestom.server.ping.ResponseDataConsumer;
@@ -76,7 +77,7 @@ public class PlayerInit {
 
         MinecraftServer.getSchedulerManager().buildTask(() -> {
 
-            Collection<Player> players = connectionManager.getOnlinePlayers();
+            Collection<Acquirable<Player>> players = connectionManager.getOnlinePlayers();
 
             if (players.isEmpty())
                 return;

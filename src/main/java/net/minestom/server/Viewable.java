@@ -55,7 +55,7 @@ public interface Viewable {
      * @param packet the packet to send to all viewers
      */
     default void sendPacketToViewers(@NotNull ServerPacket packet) {
-        PacketUtils.sendGroupedPacket(getViewers(), packet);
+        PacketUtils.sendGroupedPacketUnwrap(getViewers(), packet);
     }
 
     /**
@@ -68,7 +68,7 @@ public interface Viewable {
      */
     default void sendPacketsToViewers(@NotNull ServerPacket... packets) {
         for (ServerPacket packet : packets) {
-            PacketUtils.sendGroupedPacket(getViewers(), packet);
+            PacketUtils.sendGroupedPacketUnwrap(getViewers(), packet);
         }
     }
 

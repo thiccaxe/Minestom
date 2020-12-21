@@ -377,8 +377,8 @@ public class Advancement {
             final Set<Player> viewers = tab.getViewers();
             AdvancementsPacket createPacket = tab.createPacket();
 
-            PacketUtils.sendGroupedPacket(viewers, tab.removePacket);
-            PacketUtils.sendGroupedPacket(viewers, createPacket);
+            PacketUtils.sendGroupedPacketUnwrap(viewers, tab.removePacket);
+            PacketUtils.sendGroupedPacketUnwrap(viewers, createPacket);
         }
     }
 

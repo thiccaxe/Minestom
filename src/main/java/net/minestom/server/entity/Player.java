@@ -332,7 +332,7 @@ public class Player extends LivingEntity implements CommandSender {
 
             if (true) {
                 Collection<Acquirable<Entity>> collection = new ArrayList<>();
-                for (Player p : MinecraftServer.getConnectionManager().getOnlinePlayers()) {
+                for (Player p : MinecraftServer.getConnectionManager().getUnwrapOnlinePlayers()) {
                     collection.add(p.getAcquiredElement());
                 }
 
@@ -343,7 +343,7 @@ public class Player extends LivingEntity implements CommandSender {
             }
 
             if (false) {
-                for (Player p : MinecraftServer.getConnectionManager().getOnlinePlayers()) {
+                for (Player p : MinecraftServer.getConnectionManager().getUnwrapOnlinePlayers()) {
                     //System.out.println("THREAD "+Thread.currentThread().getName());
                     //System.out.println("test "+p.getAcquiredElement().getHandler().getPeriodIdentifier());
                     //System.out.println("test2 "+acquirablePlayer.getHandler().getPeriodIdentifier());

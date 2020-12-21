@@ -572,7 +572,7 @@ public abstract class Chunk implements Tickable, Viewable, LockedElement, DataCo
      * Sends a full {@link ChunkDataPacket} to all chunk viewers.
      */
     public synchronized void sendChunkUpdate() {
-        PacketUtils.sendGroupedPacket(getViewers(), getFreshFullDataPacket());
+        PacketUtils.sendGroupedPacketUnwrap(getViewers(), getFreshFullDataPacket());
     }
 
     /**

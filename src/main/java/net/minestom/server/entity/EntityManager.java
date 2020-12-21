@@ -42,7 +42,7 @@ public final class EntityManager {
      */
     public void handleKeepAlive(long tickStart) {
         final KeepAlivePacket keepAlivePacket = new KeepAlivePacket(tickStart);
-        for (Player player : CONNECTION_MANAGER.getOnlinePlayers()) {
+        for (Player player : CONNECTION_MANAGER.getUnwrapOnlinePlayers()) {
             final long lastKeepAlive = tickStart - player.getLastKeepAlive();
             if (lastKeepAlive > KEEP_ALIVE_DELAY && player.didAnswerKeepAlive()) {
                 player.refreshKeepAlive(tickStart);

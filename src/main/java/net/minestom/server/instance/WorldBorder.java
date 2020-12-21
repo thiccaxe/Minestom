@@ -276,7 +276,7 @@ public class WorldBorder {
      * @param packet the packet to send
      */
     private void sendPacket(@NotNull WorldBorderPacket packet) {
-        PacketUtils.sendGroupedPacket(instance.getPlayers(), packet);
+        PacketUtils.sendGroupedPacketUnwrap(instance.getPlayers(), packet);
     }
 
     public enum CollisionAxis {

@@ -11,7 +11,6 @@ import org.jetbrains.annotations.NotNull;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.util.Collection;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
@@ -89,11 +88,11 @@ public final class PacketListenerManager {
     /**
      * Executes the consumers from {@link ConnectionManager#onPacketSend(ServerPacketConsumer)}.
      *
-     * @param packet  the packet to process
-     * @param players the players which should receive the packet
+     * @param packet the packet to process
+     * @param player the player which should receive the packet
      * @return true if the packet is not cancelled, false otherwise
      */
-    public boolean processServerPacket(@NotNull ServerPacket packet, @NotNull Collection<Player> players) {
+    public boolean processServerPacket(@NotNull ServerPacket packet, @NotNull Player player) {
         final List<ServerPacketConsumer> consumers = CONNECTION_MANAGER.getSendPacketConsumers();
         if (consumers.isEmpty()) {
             return true;
@@ -101,7 +100,7 @@ public final class PacketListenerManager {
 
         final PacketController packetController = new PacketController();
         for (ServerPacketConsumer serverPacketConsumer : consumers) {
-            serverPacketConsumer.accept(players, packetController, packet);
+            serverPacketConsumer.accept(player, packetController, packet);
         }
 
         return !packetController.isCancel();

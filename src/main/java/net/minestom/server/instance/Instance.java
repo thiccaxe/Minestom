@@ -384,7 +384,7 @@ public abstract class Instance implements BlockModifier, Tickable, LockedElement
      */
     public void setTime(long time) {
         this.time = time;
-        PacketUtils.sendGroupedPacket(getPlayers(), createTimePacket());
+        PacketUtils.sendGroupedPacketUnwrap(getPlayers(), createTimePacket());
     }
 
     /**
@@ -1025,7 +1025,7 @@ public abstract class Instance implements BlockModifier, Tickable, LockedElement
 
             // time needs to be send to players
             if (timeUpdate != null && !CooldownUtils.hasCooldown(time, lastTimeUpdate, timeUpdate)) {
-                PacketUtils.sendGroupedPacket(getPlayers(), createTimePacket());
+                PacketUtils.sendGroupedPacketUnwrap(getPlayers(), createTimePacket());
                 this.lastTimeUpdate = time;
             }
 

@@ -5,6 +5,7 @@ import io.netty.buffer.Unpooled;
 import net.minestom.server.MinecraftServer;
 import net.minestom.server.entity.Player;
 import net.minestom.server.listener.manager.PacketListenerManager;
+import net.minestom.server.lock.Acquirable;
 import net.minestom.server.network.netty.packet.FramedPacket;
 import net.minestom.server.network.packet.server.ServerPacket;
 import net.minestom.server.network.packet.server.ServerPacketIdentifier;
@@ -33,6 +34,25 @@ public final class PacketUtils {
 
     }
 
+    public static void sendGroupedPacket(@NotNull Collection<Acquirable<Player>> players, @NotNull ServerPacket packet,
+                                         @Nullable PlayerValidator playerValidator) {
+        if (players.isEmpty())
+            return;
+
+        final ByteBuf finalBuffer = createFramedPacket(packet, false);
+        final FramedPacket framedPacket = new FramedPacket(finalBuffer);
+
+        // Send packet to all players
+        for (Acquirable<Player> acquirablePlayer : players) {
+            final Player player = acquirablePlayer.unsafeUnwrap();
+            sendPacket(packet, framedPacket, player, playerValidator);
+        }
+    }
+
+    public static void sendGroupedPacket(@NotNull Collection<Acquirable<Player>> players, @NotNull ServerPacket packet) {
+        sendGroupedPacket(players, packet, null);
+    }
+
     /**
      * Sends a {@link ServerPacket} to multiple players.
      * <p>
@@ -42,31 +62,17 @@ public final class PacketUtils {
      * @param packet          the packet to send to the players
      * @param playerValidator optional callback to check if a specify player of {@code players} should receive the packet
      */
-    public static void sendGroupedPacket(@NotNull Collection<Player> players, @NotNull ServerPacket packet,
-                                         @Nullable PlayerValidator playerValidator) {
+    public static void sendGroupedPacketUnwrap(@NotNull Collection<Player> players, @NotNull ServerPacket packet,
+                                               @Nullable PlayerValidator playerValidator) {
         if (players.isEmpty())
             return;
 
-        final boolean success = PACKET_LISTENER_MANAGER.processServerPacket(packet, players);
-        if (success) {
-            final ByteBuf finalBuffer = createFramedPacket(packet, false);
-            final FramedPacket framedPacket = new FramedPacket(finalBuffer);
+        final ByteBuf finalBuffer = createFramedPacket(packet, false);
+        final FramedPacket framedPacket = new FramedPacket(finalBuffer);
 
-            // Send packet to all players
-            for (Player player : players) {
-
-                // Verify if the player should receive the packet
-                if (playerValidator != null && !playerValidator.isValid(player))
-                    continue;
-
-                final PlayerConnection playerConnection = player.getPlayerConnection();
-                if (playerConnection instanceof NettyPlayerConnection) {
-                    final NettyPlayerConnection nettyPlayerConnection = (NettyPlayerConnection) playerConnection;
-                    nettyPlayerConnection.write(framedPacket);
-                } else {
-                    playerConnection.sendPacket(packet);
-                }
-            }
+        // Send packet to all players
+        for (Player player : players) {
+            sendPacket(packet, framedPacket, player, playerValidator);
         }
     }
 
@@ -76,8 +82,26 @@ public final class PacketUtils {
      *
      * @see #sendGroupedPacket(Collection, ServerPacket, PlayerValidator)
      */
-    public static void sendGroupedPacket(@NotNull Collection<Player> players, @NotNull ServerPacket packet) {
-        sendGroupedPacket(players, packet, null);
+    public static void sendGroupedPacketUnwrap(@NotNull Collection<Player> players, @NotNull ServerPacket packet) {
+        sendGroupedPacketUnwrap(players, packet, null);
+    }
+
+    private static void sendPacket(ServerPacket packet, FramedPacket framedPacket, Player player, PlayerValidator playerValidator) {
+        final boolean success = PACKET_LISTENER_MANAGER.processServerPacket(packet, player);
+        if (!success)
+            return;
+
+        // Verify if the player should receive the packet
+        if (playerValidator != null && !playerValidator.isValid(player))
+            return;
+
+        final PlayerConnection playerConnection = player.getPlayerConnection();
+        if (playerConnection instanceof NettyPlayerConnection) {
+            final NettyPlayerConnection nettyPlayerConnection = (NettyPlayerConnection) playerConnection;
+            nettyPlayerConnection.write(framedPacket);
+        } else {
+            playerConnection.sendPacket(packet);
+        }
     }
 
     /**
@@ -181,7 +205,8 @@ public final class PacketUtils {
      * @param packetBuffer      the buffer containing all the packet fields
      * @param compressionTarget the buffer which will receive the compressed version of {@code packetBuffer}
      */
-    public static void compressBuffer(@NotNull Deflater deflater, @NotNull byte[] buffer, @NotNull ByteBuf packetBuffer, @NotNull ByteBuf compressionTarget) {
+    public static void compressBuffer(@NotNull Deflater deflater, @NotNull byte[] buffer,
+                                      @NotNull ByteBuf packetBuffer, @NotNull ByteBuf compressionTarget) {
         final int packetLength = packetBuffer.readableBytes();
 
         if (packetLength < MinecraftServer.getCompressionThreshold()) {

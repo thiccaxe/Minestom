@@ -9,6 +9,7 @@ import net.minestom.server.entity.Player;
 import net.minestom.server.entity.fakeplayer.FakePlayer;
 import net.minestom.server.listener.manager.ClientPacketConsumer;
 import net.minestom.server.listener.manager.ServerPacketConsumer;
+import net.minestom.server.lock.Acquirable;
 import net.minestom.server.network.packet.client.login.LoginStartPacket;
 import net.minestom.server.network.packet.server.login.LoginSuccessPacket;
 import net.minestom.server.network.packet.server.play.ChatMessagePacket;
@@ -30,8 +31,13 @@ import java.util.function.Consumer;
  */
 public final class ConnectionManager {
 
+    private final Set<Acquirable<Player>> acquirablePlayers = new CopyOnWriteArraySet<>();
+    private final Set<Acquirable<Player>> unmodifiableAcquirablePlayers = Collections.unmodifiableSet(acquirablePlayers);
     private final Set<Player> players = new CopyOnWriteArraySet<>();
+    private final Set<Player> unmodifiablePlayers = Collections.unmodifiableSet(players);
+
     private final Map<PlayerConnection, Player> connectionPlayerMap = Collections.synchronizedMap(new HashMap<>());
+
 
     // All the consumers to call once a packet is received
     private final List<ClientPacketConsumer> receiveClientPacketConsumers = new CopyOnWriteArrayList<>();
@@ -58,12 +64,26 @@ public final class ConnectionManager {
 
     /**
      * Gets all online players.
+     * <p>
+     * {@link Acquirable} collections can be computed using the {@link net.minestom.server.lock.Acquisition}
+     * utils methods.
      *
      * @return an unmodifiable collection containing all the online players
      */
     @NotNull
-    public Collection<Player> getOnlinePlayers() {
-        return Collections.unmodifiableCollection(players);
+    public Collection<Acquirable<Player>> getOnlinePlayers() {
+        return unmodifiableAcquirablePlayers;
+    }
+
+    /**
+     * Gets all online players.
+     *
+     * @return an unmodifiable collection containing all the online players
+     * @see #getOnlinePlayers() for a thread-safe access to the collection
+     */
+    @NotNull
+    public Collection<Player> getUnwrapOnlinePlayers() {
+        return unmodifiablePlayers;
     }
 
     /**
@@ -76,7 +96,7 @@ public final class ConnectionManager {
      */
     @Nullable
     public Player getPlayer(@NotNull String username) {
-        for (Player player : getOnlinePlayers()) {
+        for (Player player : getUnwrapOnlinePlayers()) {
             if (player.getUsername().equalsIgnoreCase(username))
                 return player;
         }
@@ -93,7 +113,7 @@ public final class ConnectionManager {
      */
     @Nullable
     public Player getPlayer(@NotNull UUID uuid) {
-        for (Player player : getOnlinePlayers()) {
+        for (Player player : getUnwrapOnlinePlayers()) {
             if (player.getUuid().equals(uuid))
                 return player;
         }
@@ -128,7 +148,7 @@ public final class ConnectionManager {
         ChatMessagePacket chatMessagePacket =
                 new ChatMessagePacket(json, ChatMessagePacket.Position.SYSTEM_MESSAGE);
 
-        PacketUtils.sendGroupedPacket(recipients, chatMessagePacket);
+        PacketUtils.sendGroupedPacketUnwrap(recipients, chatMessagePacket);
     }
 
     private Collection<Player> getRecipients(@Nullable PlayerValidator condition) {
@@ -136,10 +156,10 @@ public final class ConnectionManager {
 
         // Get the recipients
         if (condition == null) {
-            recipients = getOnlinePlayers();
+            recipients = getUnwrapOnlinePlayers();
         } else {
             recipients = new ArrayList<>();
-            getOnlinePlayers().forEach(player -> {
+            getUnwrapOnlinePlayers().forEach(player -> {
                 final boolean result = condition.isValid(player);
                 if (result)
                     recipients.add(player);
@@ -292,6 +312,7 @@ public final class ConnectionManager {
      * @param player the player to add
      */
     public synchronized void createPlayer(@NotNull Player player) {
+        this.acquirablePlayers.add(player.getAcquiredElement());
         this.players.add(player);
         this.connectionPlayerMap.put(player.getPlayerConnection(), player);
     }
@@ -324,6 +345,7 @@ public final class ConnectionManager {
         if (player == null)
             return;
 
+        this.acquirablePlayers.remove(player.getAcquiredElement());
         this.players.remove(player);
         this.connectionPlayerMap.remove(connection);
     }
@@ -351,7 +373,7 @@ public final class ConnectionManager {
     public void shutdown() {
         DisconnectPacket disconnectPacket = new DisconnectPacket();
         disconnectPacket.message = getShutdownText();
-        for (Player player : getOnlinePlayers()) {
+        for (Player player : getUnwrapOnlinePlayers()) {
             final PlayerConnection playerConnection = player.getPlayerConnection();
             if (playerConnection instanceof NettyPlayerConnection) {
                 final NettyPlayerConnection nettyPlayerConnection = (NettyPlayerConnection) playerConnection;
@@ -360,6 +382,7 @@ public final class ConnectionManager {
                 channel.close();
             }
         }
+        this.acquirablePlayers.clear();
         this.players.clear();
         this.connectionPlayerMap.clear();
     }

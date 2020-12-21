@@ -399,7 +399,7 @@ public class InstanceContainer extends Instance {
                 effectPacket.data = blockStateId;
                 effectPacket.disableRelativeVolume = false;
 
-                PacketUtils.sendGroupedPacket(chunk.getViewers(), effectPacket,
+                PacketUtils.sendGroupedPacketUnwrap(chunk.getViewers(), effectPacket,
                         (viewer) -> {
                             // Prevent the block breaker to play the particles and sound two times
                             return (customBlock != null && customBlock.enableCustomBreakDelay()) || !viewer.equals(player);

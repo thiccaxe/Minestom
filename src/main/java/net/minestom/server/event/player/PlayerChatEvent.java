@@ -4,6 +4,7 @@ import net.minestom.server.chat.RichMessage;
 import net.minestom.server.entity.Player;
 import net.minestom.server.event.CancellableEvent;
 import net.minestom.server.event.PlayerEvent;
+import net.minestom.server.lock.Acquirable;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
@@ -17,13 +18,13 @@ import java.util.function.Function;
  */
 public class PlayerChatEvent extends PlayerEvent implements CancellableEvent {
 
-    private final Collection<Player> recipients;
+    private final Collection<Acquirable<Player>> recipients;
     private String message;
     private Function<PlayerChatEvent, RichMessage> chatFormat;
 
     private boolean cancelled;
 
-    public PlayerChatEvent(@NotNull Player player, @NotNull Collection<Player> recipients, @NotNull String message) {
+    public PlayerChatEvent(@NotNull Player player, @NotNull Collection<Acquirable<Player>> recipients, @NotNull String message) {
         super(player);
         this.recipients = new ArrayList<>(recipients);
         this.message = message;
@@ -46,7 +47,7 @@ public class PlayerChatEvent extends PlayerEvent implements CancellableEvent {
      * @return a modifiable list of message targets
      */
     @NotNull
-    public Collection<Player> getRecipients() {
+    public Collection<Acquirable<Player>> getRecipients() {
         return recipients;
     }
 

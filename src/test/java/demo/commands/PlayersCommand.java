@@ -17,7 +17,7 @@ public class PlayersCommand extends Command {
     }
 
     private void usage(CommandSender sender, Arguments arguments) {
-        final Collection<Player> players = MinecraftServer.getConnectionManager().getOnlinePlayers();
+        final Collection<Player> players = MinecraftServer.getConnectionManager().getUnwrapOnlinePlayers();
         final int playerCount = players.size();
         sender.sendMessage("Total players: " + playerCount);
         final int limit = 15;
