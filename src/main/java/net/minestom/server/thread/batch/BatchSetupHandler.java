@@ -80,9 +80,6 @@ public class BatchSetupHandler implements BatchHandler {
 
                 if (unwrapElement instanceof Tickable) {
                     ((Tickable) unwrapElement).tick(time);
-                } else if (unwrapElement instanceof Chunk) {
-                    // FIXME: instance null
-                    ((Chunk) unwrapElement).tick(time, null);
                 }
             }
         };

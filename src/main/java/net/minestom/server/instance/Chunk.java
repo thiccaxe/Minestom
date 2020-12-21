@@ -1,6 +1,7 @@
 package net.minestom.server.instance;
 
 import net.minestom.server.MinecraftServer;
+import net.minestom.server.Tickable;
 import net.minestom.server.Viewable;
 import net.minestom.server.data.Data;
 import net.minestom.server.data.DataContainer;
@@ -53,7 +54,7 @@ import java.util.concurrent.CopyOnWriteArraySet;
  * You generally want to avoid storing references of this object as this could lead to a huge memory leak,
  * you should store the chunk coordinates instead.
  */
-public abstract class Chunk implements Viewable, LockedElement<Chunk>, DataContainer {
+public abstract class Chunk implements Tickable, Viewable, LockedElement<Chunk>, DataContainer {
 
     protected static final BlockManager BLOCK_MANAGER = MinecraftServer.getBlockManager();
     protected static final BiomeManager BIOME_MANAGER = MinecraftServer.getBiomeManager();
@@ -69,6 +70,7 @@ public abstract class Chunk implements Viewable, LockedElement<Chunk>, DataConta
 
     private final UUID identifier;
 
+    protected final Instance instance;
     @NotNull
     protected final Biome[] biomes;
     protected final int chunkX, chunkZ;
@@ -89,8 +91,9 @@ public abstract class Chunk implements Viewable, LockedElement<Chunk>, DataConta
     // Data
     protected Data data;
 
-    public Chunk(@Nullable Biome[] biomes, int chunkX, int chunkZ, boolean shouldGenerate) {
+    public Chunk(@NotNull Instance instance, @Nullable Biome[] biomes, int chunkX, int chunkZ, boolean shouldGenerate) {
         this.identifier = UUID.randomUUID();
+        this.instance = instance;
         this.chunkX = chunkX;
         this.chunkZ = chunkZ;
         this.shouldGenerate = shouldGenerate;
@@ -130,10 +133,10 @@ public abstract class Chunk implements Viewable, LockedElement<Chunk>, DataConta
      * <p>
      * WARNING: this method doesn't necessary have to be thread-safe, proceed with caution.
      *
-     * @param time     the time of the update in milliseconds
-     * @param instance the {@link Instance} linked to this chunk
+     * @param time the time of the update in milliseconds
      */
-    public abstract void tick(long time, @NotNull Instance instance);
+    @Override
+    public abstract void tick(long time);
 
     /**
      * Gets the block state id at a position.
@@ -249,12 +252,13 @@ public abstract class Chunk implements Viewable, LockedElement<Chunk>, DataConta
      * <p>
      * The chunk position (X/Z) can be modified using the given arguments.
      *
-     * @param chunkX the chunk X of the copy
-     * @param chunkZ the chunk Z of the copy
+     * @param instance the instance of the copied chunk
+     * @param chunkX   the chunk X of the copy
+     * @param chunkZ   the chunk Z of the copy
      * @return a copy of this chunk with a potentially new instance and position
      */
     @NotNull
-    public abstract Chunk copy(int chunkX, int chunkZ);
+    public abstract Chunk copy(@NotNull Instance instance, int chunkX, int chunkZ);
 
     /**
      * Resets the chunk, this means clearing all the data making it empty.
@@ -299,6 +303,18 @@ public abstract class Chunk implements Viewable, LockedElement<Chunk>, DataConta
     @NotNull
     public UUID getIdentifier() {
         return identifier;
+    }
+
+    /**
+     * Gets the instance where this chunk is stored.
+     * <p>
+     * WARNING: the chunk of a {@link SharedInstance} will return an {@link InstanceContainer}.
+     *
+     * @return this chunk instance
+     */
+    @NotNull
+    public Instance getInstance() {
+        return instance;
     }
 
     public Biome[] getBiomes() {
