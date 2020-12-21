@@ -7,10 +7,8 @@ import org.jetbrains.annotations.NotNull;
  * <p>
  * Useful if you want to provide an access point to an object without risking to compromise
  * the thread-safety of your code.
- *
- * @param <T> the element type
  */
-public interface LockedElement<T> {
+public interface LockedElement {
 
     /**
      * Gets the {@link Acquirable} of this locked element.
@@ -20,6 +18,6 @@ public interface LockedElement<T> {
      * @return the acquirable element linked to this object
      */
     @NotNull
-    Acquirable<T> getAcquiredElement();
+    <T> Acquirable<T> getAcquiredElement();
 
 }

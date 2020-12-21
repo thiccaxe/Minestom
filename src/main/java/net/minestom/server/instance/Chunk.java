@@ -54,7 +54,7 @@ import java.util.concurrent.CopyOnWriteArraySet;
  * You generally want to avoid storing references of this object as this could lead to a huge memory leak,
  * you should store the chunk coordinates instead.
  */
-public abstract class Chunk implements Tickable, Viewable, LockedElement<Chunk>, DataContainer {
+public abstract class Chunk implements Tickable, Viewable, LockedElement, DataContainer {
 
     protected static final BlockManager BLOCK_MANAGER = MinecraftServer.getBlockManager();
     protected static final BiomeManager BIOME_MANAGER = MinecraftServer.getBiomeManager();
@@ -516,8 +516,8 @@ public abstract class Chunk implements Tickable, Viewable, LockedElement<Chunk>,
 
     @NotNull
     @Override
-    public Acquirable<Chunk> getAcquiredElement() {
-        return acquirableChunk;
+    public <T> Acquirable<T> getAcquiredElement() {
+        return (Acquirable<T>) acquirableChunk;
     }
 
     @Nullable

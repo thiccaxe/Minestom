@@ -54,7 +54,7 @@ import java.util.function.Consumer;
  * <p>
  * To create your own entity you probably want to extends {@link ObjectEntity} or {@link EntityCreature} instead.
  */
-public abstract class Entity implements Tickable, Viewable, LockedElement<Entity>, EventHandler, DataContainer, PermissionHandler {
+public abstract class Entity implements Tickable, Viewable, LockedElement, EventHandler, DataContainer, PermissionHandler {
 
     private static final Map<Integer, Entity> entityById = new ConcurrentHashMap<>();
     private static final AtomicInteger lastEntityId = new AtomicInteger();
@@ -615,8 +615,8 @@ public abstract class Entity implements Tickable, Viewable, LockedElement<Entity
 
     @NotNull
     @Override
-    public Acquirable<Entity> getAcquiredElement() {
-        return acquirableEntity;
+    public <T> Acquirable<T> getAcquiredElement() {
+        return (Acquirable<T>) acquirableEntity;
     }
 
     @NotNull

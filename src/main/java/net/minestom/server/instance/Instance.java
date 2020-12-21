@@ -58,7 +58,7 @@ import java.util.function.Consumer;
  * you need to be sure to signal the {@link UpdateManager} of the changes using
  * {@link UpdateManager#signalChunkLoad(Instance, int, int)} and {@link UpdateManager#signalChunkUnload(Instance, int, int)}.
  */
-public abstract class Instance implements BlockModifier, Tickable, LockedElement<Instance>, EventHandler, DataContainer {
+public abstract class Instance implements BlockModifier, Tickable, LockedElement, EventHandler, DataContainer {
 
     protected static final BlockManager BLOCK_MANAGER = MinecraftServer.getBlockManager();
     protected static final UpdateManager UPDATE_MANAGER = MinecraftServer.getUpdateManager();
@@ -833,8 +833,8 @@ public abstract class Instance implements BlockModifier, Tickable, LockedElement
 
     @NotNull
     @Override
-    public Acquirable<Instance> getAcquiredElement() {
-        return acquirableInstance;
+    public <T> Acquirable<T> getAcquiredElement() {
+        return (Acquirable<T>) acquirableInstance;
     }
 
     @NotNull

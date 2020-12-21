@@ -1,6 +1,7 @@
 package net.minestom.server.event;
 
 import net.minestom.server.entity.Entity;
+import net.minestom.server.lock.Acquirable;
 import org.jetbrains.annotations.NotNull;
 
 public class EntityEvent extends Event {
@@ -11,11 +12,17 @@ public class EntityEvent extends Event {
         this.entity = entity;
     }
 
+    @NotNull
+    public Acquirable<Entity> getAcquirablePlayer() {
+        return entity.getAcquiredElement();
+    }
+
     /**
      * Gets the entity of this event.
      *
      * @return the entity
      */
+    @Deprecated
     @NotNull
     public Entity getEntity() {
         return entity;
