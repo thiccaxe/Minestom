@@ -18,6 +18,7 @@ import java.util.function.Supplier;
 public final class Acquisition {
 
     private static final ScheduledExecutorService ACQUISITION_CONTENTION_SERVICE = Executors.newSingleThreadScheduledExecutor();
+    private static final ThreadLocal<List<Thread>> ACQUIRED_THREADS = ThreadLocal.withInitial(ArrayList::new);
 
     static {
         ACQUISITION_CONTENTION_SERVICE.scheduleAtFixedRate(() -> {
@@ -155,6 +156,12 @@ public final class Acquisition {
             return false;
         }
 
+        final List<Thread> acquiredThread = ACQUIRED_THREADS.get();
+        if (acquiredThread.contains(elementThread)) {
+            // This thread is already acquiring the thread
+            return true;
+        }
+
         final boolean sameThread = ThreadUtils.areSame(currentThread, elementThread);
 
         if (sameThread) {
@@ -172,10 +179,12 @@ public final class Acquisition {
             try {
                 final BatchQueue periodQueue = elementThread.getQueue();
                 synchronized (periodQueue) {
+                    acquiredThread.add(elementThread);
                     periodQueue.setWaitingThread(elementThread);
                     periodQueue.getQueue().add(data);
                     periodQueue.wait();
                 }
+                acquiredThread.remove(elementThread);
             } catch (InterruptedException e) {
                 e.printStackTrace();
             }
