@@ -1,7 +1,6 @@
 package net.minestom.server.listener;
 
 import net.minestom.server.MinecraftServer;
-
 import net.minestom.server.chat.*;
 import net.minestom.server.command.CommandManager;
 import net.minestom.server.entity.Player;
@@ -69,7 +68,7 @@ public class ChatMessageListener {
     }
 
     private static RichMessage buildDefaultChatMessage(PlayerChatEvent chatEvent) {
-        final String username = chatEvent.getPlayer().getUsername();
+        final String username = chatEvent.getAcquirablePlayer().unsafeUnwrap().getUsername();
 
         final ColoredText usernameText = ColoredText.of(String.format("<%s>", username));
 
