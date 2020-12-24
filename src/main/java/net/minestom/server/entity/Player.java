@@ -53,6 +53,7 @@ import net.minestom.server.utils.binary.BinaryWriter;
 import net.minestom.server.utils.callback.OptionalCallback;
 import net.minestom.server.utils.chunk.ChunkCallback;
 import net.minestom.server.utils.chunk.ChunkUtils;
+import net.minestom.server.utils.entity.EntityUtils;
 import net.minestom.server.utils.instance.InstanceUtils;
 import net.minestom.server.utils.time.CooldownUtils;
 import net.minestom.server.utils.time.TimeUnit;
@@ -535,36 +536,45 @@ public class Player extends LivingEntity implements CommandSender {
     public void kill() {
         if (!isDead()) {
 
-            // send death screen text to the killed player
+            ColoredText deathText;
+            JsonMessage chatMessage;
+
+            // get death screen text to the killed player
             {
-                ColoredText deathText;
                 if (lastDamageSource != null) {
                     deathText = lastDamageSource.buildDeathScreenText(this);
                 } else { // may happen if killed by the server without applying damage
                     deathText = ColoredText.of("Killed by poor programming.");
                 }
-
-                // #buildDeathScreenText can return null, check here
-                if (deathText != null) {
-                    CombatEventPacket deathPacket = CombatEventPacket.death(this, Optional.empty(), deathText);
-                    playerConnection.sendPacket(deathPacket);
-                }
             }
 
-            // send death message to chat
+            // get death message to chat
             {
-                JsonMessage chatMessage;
                 if (lastDamageSource != null) {
                     chatMessage = lastDamageSource.buildDeathMessage(this);
                 } else { // may happen if killed by the server without applying damage
                     chatMessage = ColoredText.of(getUsername() + " was killed by poor programming.");
                 }
-
-                // #buildDeathMessage can return null, check here
-                if (chatMessage != null) {
-                    MinecraftServer.getConnectionManager().broadcastMessage(chatMessage);
-                }
             }
+
+            // Call player death event
+            PlayerDeathEvent playerDeathEvent = new PlayerDeathEvent(this, deathText, chatMessage);
+            callEvent(PlayerDeathEvent.class, playerDeathEvent);
+
+            deathText = playerDeathEvent.getDeathText();
+            chatMessage = playerDeathEvent.getChatMessage();
+
+            // #buildDeathScreenText can return null, check here
+            if (deathText != null) {
+                CombatEventPacket deathPacket = CombatEventPacket.death(this, Optional.empty(), deathText);
+                playerConnection.sendPacket(deathPacket);
+            }
+
+            // #buildDeathMessage can return null, check here
+            if (chatMessage != null) {
+                MinecraftServer.getConnectionManager().broadcastMessage(chatMessage);
+            }
+
         }
         super.kill();
     }
@@ -1621,24 +1631,15 @@ public class Player extends LivingEntity implements CommandSender {
         });
 
         // Manage entities in unchecked chunks
-        final long[] chunksInRange = ChunkUtils.getChunksInRange(newChunk.toPosition(), entityViewDistance);
+        EntityUtils.forEachRange(instance, newChunk.toPosition(), entityViewDistance, entity -> {
+            if (entity.isAutoViewable() && !entity.viewers.contains(this)) {
+                entity.addViewer(this);
+            }
 
-        for (long chunkIndex : chunksInRange) {
-            final int chunkX = ChunkUtils.getChunkCoordX(chunkIndex);
-            final int chunkZ = ChunkUtils.getChunkCoordZ(chunkIndex);
-            final Chunk chunk = instance.getChunk(chunkX, chunkZ);
-            if (chunk == null)
-                continue;
-            instance.getChunkEntities(chunk).forEach(entity -> {
-                if (isAutoViewable() && !entity.viewers.contains(this)) {
-                    entity.addViewer(this);
-                }
-
-                if (entity instanceof Player && entity.isAutoViewable() && !viewers.contains(entity)) {
-                    addViewer((Player) entity);
-                }
-            });
-        }
+            if (entity instanceof Player && isAutoViewable() && !viewers.contains(entity)) {
+                addViewer((Player) entity);
+            }
+        });
 
     }
 

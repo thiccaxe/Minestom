@@ -71,6 +71,7 @@ public abstract class Entity implements Tickable, Viewable, LockedElement, Event
     protected static final byte METADATA_BOOLEAN = 7;
     protected static final byte METADATA_ROTATION = 8;
     protected static final byte METADATA_POSITION = 9;
+    protected static final byte METADATA_OPTPOSITION = 10;
     protected static final byte METADATA_PARTICLE = 15;
     protected static final byte METADATA_POSE = 18;
 

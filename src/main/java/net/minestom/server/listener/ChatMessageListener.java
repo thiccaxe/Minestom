@@ -1,10 +1,8 @@
 package net.minestom.server.listener;
 
 import net.minestom.server.MinecraftServer;
-import net.minestom.server.chat.ChatClickEvent;
-import net.minestom.server.chat.ChatHoverEvent;
-import net.minestom.server.chat.ColoredText;
-import net.minestom.server.chat.RichMessage;
+
+import net.minestom.server.chat.*;
 import net.minestom.server.command.CommandManager;
 import net.minestom.server.entity.Player;
 import net.minestom.server.event.player.PlayerChatEvent;
@@ -43,9 +41,9 @@ public class ChatMessageListener {
         // Call the event
         player.callCancellableEvent(PlayerChatEvent.class, playerChatEvent, () -> {
 
-            final Function<PlayerChatEvent, RichMessage> formatFunction = playerChatEvent.getChatFormatFunction();
+            final Function<PlayerChatEvent, JsonMessage> formatFunction = playerChatEvent.getChatFormatFunction();
 
-            RichMessage textObject;
+            JsonMessage textObject;
 
             if (formatFunction != null) {
                 // Custom format
