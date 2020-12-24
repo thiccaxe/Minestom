@@ -21,6 +21,7 @@ public class Main {
         MinecraftServer minecraftServer = MinecraftServer.init();
 
         // MinecraftServer.setShouldProcessNettyErrors(true);
+        MinecraftServer.setWaitMonitoring(true);
 
         BlockManager blockManager = MinecraftServer.getBlockManager();
         blockManager.registerCustomBlock(new CustomBlockSample());

@@ -134,6 +134,7 @@ public final class MinecraftServer {
     private static int entityViewDistance = 5;
     private static int compressionThreshold = 256;
     private static boolean packetCaching = true;
+    private static boolean waitMonitoring = false;
     private static ResponseDataConsumer responseDataConsumer;
     private static String brandName = "Minestom";
     private static Difficulty difficulty = Difficulty.NORMAL;
@@ -571,6 +572,14 @@ public final class MinecraftServer {
     public static void setPacketCaching(boolean packetCaching) {
         Check.stateCondition(started, "You cannot change the packet caching value after the server has been started.");
         MinecraftServer.packetCaching = packetCaching;
+    }
+
+    public static boolean hasWaitMonitoring() {
+        return waitMonitoring;
+    }
+
+    public static void setWaitMonitoring(boolean waitMonitoring) {
+        MinecraftServer.waitMonitoring = waitMonitoring;
     }
 
     /**

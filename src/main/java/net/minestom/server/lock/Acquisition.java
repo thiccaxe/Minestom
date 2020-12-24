@@ -12,6 +12,7 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.Phaser;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicLong;
 import java.util.function.Consumer;
 import java.util.function.Supplier;
 
@@ -19,6 +20,8 @@ public final class Acquisition {
 
     private static final ScheduledExecutorService ACQUISITION_CONTENTION_SERVICE = Executors.newSingleThreadScheduledExecutor();
     private static final ThreadLocal<List<Thread>> ACQUIRED_THREADS = ThreadLocal.withInitial(ArrayList::new);
+
+    private static final AtomicLong WAIT_COUNTER_NANO = new AtomicLong();
 
     static {
         ACQUISITION_CONTENTION_SERVICE.scheduleAtFixedRate(() -> {
@@ -177,6 +180,12 @@ public final class Acquisition {
             }
 
             try {
+                final boolean monitoring = MinecraftServer.hasWaitMonitoring();
+                long time = 0;
+                if (monitoring) {
+                    time = System.nanoTime();
+                }
+
                 final BatchQueue periodQueue = elementThread.getQueue();
                 synchronized (periodQueue) {
                     acquiredThread.add(elementThread);
@@ -185,6 +194,11 @@ public final class Acquisition {
                     periodQueue.wait();
                 }
                 acquiredThread.remove(elementThread);
+
+                if (monitoring) {
+                    time = System.nanoTime() - time;
+                    WAIT_COUNTER_NANO.addAndGet(time);
+                }
             } catch (InterruptedException e) {
                 e.printStackTrace();
             }
@@ -212,6 +226,14 @@ public final class Acquisition {
         }
 
         return threadCacheMap;
+    }
+
+    public static long getCurrentWaitMonitoring() {
+        return WAIT_COUNTER_NANO.get();
+    }
+
+    public static void resetWaitMonitoring() {
+        WAIT_COUNTER_NANO.set(0);
     }
 
     public static final class AcquisitionData {

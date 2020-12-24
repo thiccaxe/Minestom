@@ -5,10 +5,14 @@ import com.google.common.util.concurrent.ThreadFactoryBuilder;
 import net.minestom.server.entity.EntityManager;
 import net.minestom.server.instance.Instance;
 import net.minestom.server.instance.InstanceManager;
+import net.minestom.server.lock.Acquisition;
 import net.minestom.server.thread.PerChunkThreadProvider;
 import net.minestom.server.thread.ThreadProvider;
+import net.minestom.server.utils.MathUtils;
 import net.minestom.server.utils.validate.Check;
 import org.jetbrains.annotations.NotNull;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.util.Queue;
 import java.util.concurrent.CountDownLatch;
@@ -24,6 +28,8 @@ import java.util.function.LongConsumer;
  * it can be modified with {@link #setThreadProvider(ThreadProvider)}.
  */
 public final class UpdateManager {
+
+    public final static Logger LOGGER = LoggerFactory.getLogger(UpdateManager.class);
 
     private final ScheduledExecutorService updateExecutionService = Executors.newSingleThreadScheduledExecutor(
             new ThreadFactoryBuilder().setNameFormat(MinecraftServer.THREAD_NAME_UPDATE).build()
@@ -87,6 +93,12 @@ public final class UpdateManager {
             doTickCallback(tickEndCallbacks, tickTime / 1000000L);
 
             //System.out.println("tick " + tickTime / 1e6D);
+
+            if (MinecraftServer.hasWaitMonitoring()) {
+                final double monitoring = MathUtils.round(Acquisition.getCurrentWaitMonitoring() / 1e6D, 2);
+                LOGGER.info("Tick waiting time has been " + monitoring + "ms");
+                Acquisition.resetWaitMonitoring();
+            }
 
         }, 0, MinecraftServer.TICK_MS, TimeUnit.MILLISECONDS);
     }
