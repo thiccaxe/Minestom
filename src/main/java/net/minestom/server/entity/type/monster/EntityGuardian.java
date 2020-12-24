@@ -13,7 +13,6 @@ import java.util.function.Consumer;
 public class EntityGuardian extends EntityCreature implements Monster {
 
     private boolean retractingSpikes;
-    private Entity target;
 
     public EntityGuardian(Position spawnPosition) {
         super(EntityType.GUARDIAN, spawnPosition);
@@ -50,13 +49,5 @@ public class EntityGuardian extends EntityCreature implements Monster {
 
     public void setRetractingSpikes(boolean retractingSpikes) {
         this.retractingSpikes = retractingSpikes;
-    }
-
-    public Entity getTarget() {
-        return target;
-    }
-
-    public void setTarget(@NotNull Entity target) {
-        this.target = target;
     }
 }

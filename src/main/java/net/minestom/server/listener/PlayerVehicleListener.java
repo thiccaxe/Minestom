@@ -3,6 +3,7 @@ package net.minestom.server.listener;
 import net.minestom.server.entity.Entity;
 import net.minestom.server.entity.Player;
 import net.minestom.server.entity.type.vehicle.EntityBoat;
+import net.minestom.server.lock.Acquirable;
 import net.minestom.server.network.packet.client.play.ClientSteerBoatPacket;
 import net.minestom.server.network.packet.client.play.ClientSteerVehiclePacket;
 import net.minestom.server.network.packet.client.play.ClientVehicleMovePacket;
@@ -18,10 +19,12 @@ public class PlayerVehicleListener {
     }
 
     public static void vehicleMoveListener(ClientVehicleMovePacket packet, Player player) {
-        final Entity vehicle = player.getVehicle();
+        final Acquirable<Entity> acquirableVehicle = player.getVehicle();
 
-        if (vehicle == null)
+        if (acquirableVehicle == null)
             return;
+
+        final Entity vehicle = acquirableVehicle.unsafeUnwrap();
 
         final Position newPosition = new Position((float) packet.x, (float) packet.y, (float) packet.z);
         vehicle.refreshPosition(newPosition);
@@ -40,7 +43,12 @@ public class PlayerVehicleListener {
     }
 
     public static void boatSteerListener(ClientSteerBoatPacket packet, Player player) {
-        final Entity vehicle = player.getVehicle();
+        final Acquirable<Entity> acquirableVehicle = player.getVehicle();
+
+        if (acquirableVehicle == null)
+            return;
+
+        final Entity vehicle = acquirableVehicle.unsafeUnwrap();
 
         if (!(vehicle instanceof EntityBoat))
             return;

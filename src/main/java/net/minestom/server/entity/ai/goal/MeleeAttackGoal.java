@@ -4,6 +4,7 @@ import net.minestom.server.entity.Entity;
 import net.minestom.server.entity.EntityCreature;
 import net.minestom.server.entity.ai.GoalSelector;
 import net.minestom.server.entity.ai.TargetSelector;
+import net.minestom.server.lock.Acquirable;
 import net.minestom.server.utils.Position;
 import net.minestom.server.utils.time.CooldownUtils;
 import net.minestom.server.utils.time.TimeUnit;
@@ -92,7 +93,14 @@ public class MeleeAttackGoal extends GoalSelector {
      */
     @Nullable
     private Entity getTarget() {
-        final Entity target = entityCreature.getTarget();
-        return target == null ? findTarget() : target;
+        Acquirable<Entity> acquirableEntity = entityCreature.getTarget();
+        if (acquirableEntity != null) {
+            return acquirableEntity.unsafeUnwrap();
+        }
+        acquirableEntity = findTarget();
+        if (acquirableEntity != null) {
+            return acquirableEntity.unsafeUnwrap();
+        }
+        return null;
     }
 }

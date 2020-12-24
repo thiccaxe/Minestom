@@ -20,6 +20,7 @@ import net.minestom.server.scoreboard.Team;
 import net.minestom.server.sound.Sound;
 import net.minestom.server.sound.SoundCategory;
 import net.minestom.server.utils.Position;
+import net.minestom.server.utils.acquirable.AcquirableUtils;
 import net.minestom.server.utils.binary.BinaryWriter;
 import net.minestom.server.utils.time.CooldownUtils;
 import net.minestom.server.utils.time.TimeUnit;
@@ -224,7 +225,7 @@ public abstract class LivingEntity extends Entity implements EquipmentHandler {
 
         // Remove passengers if any
         if (hasPassenger()) {
-            getPassengers().forEach(this::removePassenger);
+            AcquirableUtils.forEachUnwrap(getPassengers(), this::removePassenger);
         }
 
         EntityDeathEvent entityDeathEvent = new EntityDeathEvent(this);

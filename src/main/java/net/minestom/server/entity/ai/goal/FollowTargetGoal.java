@@ -3,6 +3,7 @@ package net.minestom.server.entity.ai.goal;
 import net.minestom.server.entity.Entity;
 import net.minestom.server.entity.EntityCreature;
 import net.minestom.server.entity.ai.GoalSelector;
+import net.minestom.server.lock.Acquirable;
 import net.minestom.server.utils.MathUtils;
 import net.minestom.server.utils.Position;
 import net.minestom.server.utils.time.UpdateOption;
@@ -29,7 +30,7 @@ public class FollowTargetGoal extends GoalSelector {
     @Override
     public boolean shouldStart() {
         return entityCreature.getTarget() != null &&
-                getDistance(entityCreature.getTarget().getPosition(), entityCreature.getPosition()) >= 2;
+                getDistance(entityCreature.getTarget().unsafeUnwrap().getPosition(), entityCreature.getPosition()) >= 2;
     }
 
     @Override
@@ -37,9 +38,11 @@ public class FollowTargetGoal extends GoalSelector {
         lastUpdateTime = 0;
         forceEnd = false;
         lastTargetPos = null;
-        final Entity target = entityCreature.getTarget();
+        final Acquirable<Entity> acquirableTarget = entityCreature.getTarget();
 
-        if (target != null) {
+        if (acquirableTarget != null) {
+            final Entity target = acquirableTarget.unsafeUnwrap();
+
             lastTargetPos = target.getPosition().clone();
             if (getDistance(lastTargetPos, entityCreature.getPosition()) < 2) {
                 forceEnd = true;
@@ -63,7 +66,8 @@ public class FollowTargetGoal extends GoalSelector {
                 pathUpdateOption.getTimeUnit().toMilliseconds(pathUpdateOption.getValue()) + lastUpdateTime > time) {
             return;
         }
-        Position targetPos = entityCreature.getTarget() != null ? entityCreature.getTarget().getPosition() : null;
+        final Position targetPos = entityCreature.getTarget() != null ?
+                entityCreature.getTarget().unsafeUnwrap().getPosition() : null;
         if (targetPos != null && !targetPos.equals(lastTargetPos)) {
             lastUpdateTime = time;
             lastTargetPos.copy(lastTargetPos);
@@ -75,7 +79,7 @@ public class FollowTargetGoal extends GoalSelector {
     public boolean shouldEnd() {
         return forceEnd ||
                 entityCreature.getTarget() == null ||
-                getDistance(entityCreature.getTarget().getPosition(), entityCreature.getPosition()) < 2;
+                getDistance(entityCreature.getTarget().unsafeUnwrap().getPosition(), entityCreature.getPosition()) < 2;
     }
 
     @Override

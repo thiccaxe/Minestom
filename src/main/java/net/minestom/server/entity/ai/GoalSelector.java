@@ -2,6 +2,7 @@ package net.minestom.server.entity.ai;
 
 import net.minestom.server.entity.Entity;
 import net.minestom.server.entity.EntityCreature;
+import net.minestom.server.lock.Acquirable;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
@@ -50,11 +51,11 @@ public abstract class GoalSelector {
      * @return the target entity, null if not found
      */
     @Nullable
-    public Entity findTarget() {
+    public Acquirable<Entity> findTarget() {
         for (TargetSelector targetSelector : entityCreature.getTargetSelectors()) {
             final Entity entity = targetSelector.findTarget();
             if (entity != null) {
-                return entity;
+                return entity.getAcquiredElement();
             }
         }
         return null;
@@ -66,8 +67,8 @@ public abstract class GoalSelector {
      * @return the entity
      */
     @NotNull
-    public EntityCreature getEntityCreature() {
-        return entityCreature;
+    public Acquirable<EntityCreature> getEntityCreature() {
+        return entityCreature.getAcquiredElement();
     }
 
     /**

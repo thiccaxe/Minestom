@@ -30,6 +30,7 @@ import net.minestom.server.thread.ThreadProvider;
 import net.minestom.server.utils.BlockPosition;
 import net.minestom.server.utils.Position;
 import net.minestom.server.utils.Vector;
+import net.minestom.server.utils.acquirable.AcquirableUtils;
 import net.minestom.server.utils.binary.BinaryWriter;
 import net.minestom.server.utils.callback.OptionalCallback;
 import net.minestom.server.utils.chunk.ChunkCallback;
@@ -107,7 +108,7 @@ public abstract class Entity implements Tickable, Viewable, LockedElement, Event
     private boolean shouldRemove;
     private long scheduledRemoveTime;
 
-    private final Set<Entity> passengers = new CopyOnWriteArraySet<>();
+    private final Set<Acquirable<Entity>> passengers = new CopyOnWriteArraySet<>();
     protected EntityType entityType; // UNSAFE to change, modify at your own risk
 
     // Network synchronization, send the absolute position of the entity each X milliseconds
@@ -842,8 +843,8 @@ public abstract class Entity implements Tickable, Viewable, LockedElement, Event
      * @return the entity vehicle, or null if there is not any
      */
     @Nullable
-    public Entity getVehicle() {
-        return vehicle;
+    public Acquirable<Entity> getVehicle() {
+        return AcquirableUtils.getOptionalAcquirable(vehicle);
     }
 
     /**
@@ -858,10 +859,11 @@ public abstract class Entity implements Tickable, Viewable, LockedElement, Event
         Check.stateCondition(instance == null, "You need to set an instance using Entity#setInstance");
 
         if (entity.getVehicle() != null) {
-            entity.getVehicle().removePassenger(entity);
+            // Thread safe operation, allowing for unwrap
+            entity.getVehicle().unsafeUnwrap().removePassenger(entity);
         }
 
-        this.passengers.add(entity);
+        this.passengers.add(entity.getAcquiredElement());
         entity.vehicle = this;
 
         sendPacketToViewersAndSelf(getPassengersPacket());
@@ -899,7 +901,7 @@ public abstract class Entity implements Tickable, Viewable, LockedElement, Event
      * @return an unmodifiable list containing all the entity passengers
      */
     @NotNull
-    public Set<Entity> getPassengers() {
+    public Set<Acquirable<Entity>> getPassengers() {
         return Collections.unmodifiableSet(passengers);
     }
 
@@ -910,8 +912,8 @@ public abstract class Entity implements Tickable, Viewable, LockedElement, Event
 
         int[] passengers = new int[this.passengers.size()];
         int counter = 0;
-        for (Entity passenger : this.passengers) {
-            passengers[counter++] = passenger.getEntityId();
+        for (Acquirable<Entity> passenger : this.passengers) {
+            passengers[counter++] = passenger.unsafeUnwrap().getEntityId();
         }
 
         passengersPacket.passengersId = passengers;
@@ -996,6 +998,7 @@ public abstract class Entity implements Tickable, Viewable, LockedElement, Event
      *
      * @return the custom name of the entity, null if there is not
      */
+    @Nullable
     public ColoredText getCustomName() {
         return customName;
     }
@@ -1005,7 +1008,7 @@ public abstract class Entity implements Tickable, Viewable, LockedElement, Event
      *
      * @param customName the custom name of the entity, null to remove it
      */
-    public void setCustomName(ColoredText customName) {
+    public void setCustomName(@Nullable ColoredText customName) {
         this.customName = customName;
         sendMetadataIndex(2);
     }
@@ -1082,8 +1085,8 @@ public abstract class Entity implements Tickable, Viewable, LockedElement, Event
         this.cacheZ = z;
 
         if (hasPassenger()) {
-            for (Entity passenger : getPassengers()) {
-                passenger.refreshPosition(x, y, z);
+            for (Acquirable<Entity> passenger : getPassengers()) {
+                passenger.unsafeUnwrap().refreshPosition(x, y, z);
             }
         }
 
@@ -1168,6 +1171,7 @@ public abstract class Entity implements Tickable, Viewable, LockedElement, Event
      *
      * @return the current position of the entity
      */
+    @NotNull
     public Position getPosition() {
         return position;
     }

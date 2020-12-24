@@ -22,6 +22,7 @@ import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
 import java.util.*;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.CopyOnWriteArraySet;
 import java.util.function.Consumer;
@@ -36,7 +37,7 @@ public final class ConnectionManager {
     private final Set<Player> players = new CopyOnWriteArraySet<>();
     private final Set<Player> unmodifiablePlayers = Collections.unmodifiableSet(players);
 
-    private final Map<PlayerConnection, Player> connectionPlayerMap = Collections.synchronizedMap(new HashMap<>());
+    private final Map<PlayerConnection, Player> connectionPlayerMap = new ConcurrentHashMap<>();
 
 
     // All the consumers to call once a packet is received
@@ -56,10 +57,12 @@ public final class ConnectionManager {
      * Gets the {@link Player} linked to a {@link PlayerConnection}.
      *
      * @param connection the player connection
-     * @return the player linked to the connection
+     * @return the player linked to the connection, null if not found
      */
-    public Player getPlayer(@NotNull PlayerConnection connection) {
-        return connectionPlayerMap.get(connection);
+    @Nullable
+    public Acquirable<Player> getPlayer(@NotNull PlayerConnection connection) {
+        Player player = connectionPlayerMap.get(connection);
+        return player != null ? player.getAcquiredElement() : null;
     }
 
     /**
@@ -95,9 +98,9 @@ public final class ConnectionManager {
      * @return the first player who validate the username condition, null if none was found
      */
     @Nullable
-    public Player getPlayer(@NotNull String username) {
-        for (Player player : getUnwrapOnlinePlayers()) {
-            if (player.getUsername().equalsIgnoreCase(username))
+    public Acquirable<Player> getPlayer(@NotNull String username) {
+        for (Acquirable<Player> player : getOnlinePlayers()) {
+            if (player.unsafeUnwrap().getUsername().equalsIgnoreCase(username))
                 return player;
         }
         return null;
@@ -112,9 +115,9 @@ public final class ConnectionManager {
      * @return the first player who validate the UUID condition, null if none was found
      */
     @Nullable
-    public Player getPlayer(@NotNull UUID uuid) {
-        for (Player player : getUnwrapOnlinePlayers()) {
-            if (player.getUuid().equals(uuid))
+    public Acquirable<Player> getPlayer(@NotNull UUID uuid) {
+        for (Acquirable<Player> player : getOnlinePlayers()) {
+            if (player.unsafeUnwrap().getUuid().equals(uuid))
                 return player;
         }
         return null;

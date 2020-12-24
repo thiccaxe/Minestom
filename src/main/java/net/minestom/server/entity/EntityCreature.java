@@ -12,11 +12,13 @@ import net.minestom.server.event.entity.EntityAttackEvent;
 import net.minestom.server.event.item.ArmorEquipEvent;
 import net.minestom.server.instance.Instance;
 import net.minestom.server.item.ItemStack;
+import net.minestom.server.lock.Acquirable;
 import net.minestom.server.network.packet.server.play.EntityEquipmentPacket;
 import net.minestom.server.network.packet.server.play.EntityMovementPacket;
 import net.minestom.server.network.packet.server.play.SpawnLivingEntityPacket;
 import net.minestom.server.network.player.PlayerConnection;
 import net.minestom.server.utils.Position;
+import net.minestom.server.utils.acquirable.AcquirableUtils;
 import net.minestom.server.utils.time.TimeUnit;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
@@ -42,7 +44,7 @@ public abstract class EntityCreature extends LivingEntity implements NavigableEn
     protected final List<TargetSelector> targetSelectors = new ArrayList<>();
     private GoalSelector currentGoalSelector;
 
-    private Entity target;
+    protected Entity target;
 
     /**
      * Lock used to support #switchEntityType
@@ -227,8 +229,8 @@ public abstract class EntityCreature extends LivingEntity implements NavigableEn
      * @return the entity target
      */
     @Nullable
-    public Entity getTarget() {
-        return target;
+    public Acquirable<Entity> getTarget() {
+        return AcquirableUtils.getOptionalAcquirable(target);
     }
 
     /**
@@ -390,6 +392,7 @@ public abstract class EntityCreature extends LivingEntity implements NavigableEn
         return this;
     }
 
+    @NotNull
     private ItemStack getEquipmentItem(@NotNull ItemStack itemStack, @NotNull ArmorEquipEvent.ArmorSlot armorSlot) {
         ArmorEquipEvent armorEquipEvent = new ArmorEquipEvent(this, itemStack, armorSlot);
         callEvent(ArmorEquipEvent.class, armorEquipEvent);

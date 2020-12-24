@@ -7,6 +7,7 @@ import net.minestom.server.command.builder.Command;
 import net.minestom.server.command.builder.arguments.Argument;
 import net.minestom.server.command.builder.arguments.ArgumentType;
 import net.minestom.server.entity.Player;
+import net.minestom.server.lock.Acquirable;
 import net.minestom.server.utils.Position;
 import net.minestom.server.utils.location.RelativeVec;
 
@@ -25,10 +26,11 @@ public class TeleportCommand extends Command {
     }
 
     private void onPlayerTeleport(CommandSender sender, Arguments args) {
-        Player pl = MinecraftServer.getConnectionManager().getPlayer(args.getWord("player"));
-        if (pl != null && sender.isPlayer()) {
-            Player player = (Player) sender;
-            player.teleport(pl.getPosition());
+        final String playerName = args.getWord("player");
+        Acquirable<Player> acquirableTarget = MinecraftServer.getConnectionManager().getPlayer(playerName);
+        if (acquirableTarget != null && sender.isPlayer()) {
+            Player player = sender.asPlayer();
+            player.teleport(acquirableTarget.unsafeUnwrap().getPosition());
         }
     }
 
