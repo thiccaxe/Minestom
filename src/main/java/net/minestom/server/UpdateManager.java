@@ -95,8 +95,8 @@ public final class UpdateManager {
             //System.out.println("tick " + tickTime / 1e6D);
 
             if (MinecraftServer.hasWaitMonitoring()) {
-                final double monitoring = MathUtils.round(Acquisition.getCurrentWaitMonitoring() / 1e6D, 2);
-                LOGGER.info("Tick waiting time has been " + monitoring + "ms");
+                final double waitingTime = MathUtils.round(Acquisition.getCurrentWaitMonitoring() / 1e6D, 2);
+                LOGGER.info("Tick waiting time has been " + waitingTime + "ms");
                 Acquisition.resetWaitMonitoring();
             }
 
