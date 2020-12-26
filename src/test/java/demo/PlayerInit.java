@@ -116,24 +116,26 @@ public class PlayerInit {
 
         globalEventHandler.addEventCallback(EntityAttackEvent.class, event -> {
             final Entity source = event.getEntity();
-            final Entity entity = event.getTarget();
-            if (entity instanceof EntityCreature) {
-                EntityCreature creature = (EntityCreature) entity;
-                creature.damage(DamageType.fromEntity(source), 0);
-                Vector velocity = source.getPosition().clone().getDirection().multiply(3);
-                velocity.setY(3f);
-                entity.setVelocity(velocity);
-            } else if (entity instanceof Player) {
-                Player target = (Player) entity;
-                Vector velocity = source.getPosition().clone().getDirection().multiply(4);
-                velocity.setY(3.5f);
-                target.setVelocity(velocity);
-                target.damage(DamageType.fromEntity(source), 5);
-            }
 
-            if (source instanceof Player) {
-                ((Player) source).sendMessage("You attacked something!");
-            }
+            event.getTarget().acquire(entity -> {
+                if (entity instanceof EntityCreature) {
+                    EntityCreature creature = (EntityCreature) entity;
+                    creature.damage(DamageType.fromEntity(source), 0);
+                    Vector velocity = source.getPosition().clone().getDirection().multiply(3);
+                    velocity.setY(3f);
+                    entity.setVelocity(velocity);
+                } else if (entity instanceof Player) {
+                    Player target = (Player) entity;
+                    Vector velocity = source.getPosition().clone().getDirection().multiply(4);
+                    velocity.setY(3.5f);
+                    target.setVelocity(velocity);
+                    target.damage(DamageType.fromEntity(source), 5);
+                }
+
+                if (source instanceof Player) {
+                    ((Player) source).sendMessage("You attacked something!");
+                }
+            });
         });
 
         globalEventHandler.addEventCallback(PlayerDeathEvent.class, event -> {

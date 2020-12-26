@@ -4,6 +4,7 @@ import net.minestom.server.entity.Entity;
 import net.minestom.server.event.CancellableEvent;
 import net.minestom.server.event.InstanceEvent;
 import net.minestom.server.instance.Instance;
+import net.minestom.server.lock.Acquirable;
 import org.jetbrains.annotations.NotNull;
 
 /**
@@ -26,8 +27,8 @@ public class RemoveEntityFromInstanceEvent extends InstanceEvent implements Canc
      * @return entity being removed
      */
     @NotNull
-    public Entity getEntity() {
-        return entity;
+    public Acquirable<Entity> getEntity() {
+        return entity.getAcquiredElement();
     }
 
     @Override

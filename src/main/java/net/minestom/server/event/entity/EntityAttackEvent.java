@@ -2,6 +2,7 @@ package net.minestom.server.event.entity;
 
 import net.minestom.server.entity.Entity;
 import net.minestom.server.event.EntityEvent;
+import net.minestom.server.lock.Acquirable;
 import org.jetbrains.annotations.NotNull;
 
 /**
@@ -21,7 +22,7 @@ public class EntityAttackEvent extends EntityEvent {
      * @return the target of the attack
      */
     @NotNull
-    public Entity getTarget() {
-        return target;
+    public Acquirable<Entity> getTarget() {
+        return target.getAcquiredElement();
     }
 }

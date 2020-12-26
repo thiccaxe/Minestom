@@ -18,17 +18,6 @@ public class EntitySpawnEvent extends EntityEvent {
     }
 
     /**
-     * Gets the entity who spawned in the instance.
-     *
-     * @return the entity
-     */
-    @NotNull
-    @Override
-    public Entity getEntity() {
-        return entity;
-    }
-
-    /**
      * Gets the entity new instance.
      *
      * @return the instance

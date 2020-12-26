@@ -3,6 +3,7 @@ package net.minestom.server.event.player;
 import net.minestom.server.entity.Entity;
 import net.minestom.server.entity.Player;
 import net.minestom.server.event.PlayerEvent;
+import net.minestom.server.lock.Acquirable;
 import org.jetbrains.annotations.NotNull;
 
 /**
@@ -25,8 +26,8 @@ public class PlayerEntityInteractEvent extends PlayerEvent {
      * @return the {@link Entity}
      */
     @NotNull
-    public Entity getTarget() {
-        return entityTarget;
+    public Acquirable<Entity> getTarget() {
+        return entityTarget.getAcquiredElement();
     }
 
     /**

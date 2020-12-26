@@ -1,6 +1,8 @@
 package net.minestom.server.entity.damage;
 
 import net.minestom.server.entity.Entity;
+import net.minestom.server.lock.Acquirable;
+import net.minestom.server.utils.acquirable.AcquirableUtils;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
@@ -24,8 +26,8 @@ public class EntityProjectileDamage extends DamageType {
      * @return the projectile
      */
     @NotNull
-    public Entity getProjectile() {
-        return projectile;
+    public Acquirable<Entity> getProjectile() {
+        return projectile.getAcquiredElement();
     }
 
     /**
@@ -34,7 +36,7 @@ public class EntityProjectileDamage extends DamageType {
      * @return the shooter of the projectile, null if not any
      */
     @Nullable
-    public Entity getShooter() {
-        return shooter;
+    public Acquirable<Entity> getShooter() {
+        return AcquirableUtils.getOptionalAcquirable(shooter);
     }
 }

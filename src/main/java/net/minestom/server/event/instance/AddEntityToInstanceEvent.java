@@ -4,6 +4,7 @@ import net.minestom.server.entity.Entity;
 import net.minestom.server.event.CancellableEvent;
 import net.minestom.server.event.InstanceEvent;
 import net.minestom.server.instance.Instance;
+import net.minestom.server.lock.Acquirable;
 import org.jetbrains.annotations.NotNull;
 
 /**
@@ -27,8 +28,8 @@ public class AddEntityToInstanceEvent extends InstanceEvent implements Cancellab
      * @return the entity being added
      */
     @NotNull
-    public Entity getEntity() {
-        return entity;
+    public Acquirable<Entity> getEntity() {
+        return entity.getAcquiredElement();
     }
 
     @Override

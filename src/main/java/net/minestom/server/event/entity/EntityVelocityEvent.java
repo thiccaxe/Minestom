@@ -21,17 +21,6 @@ public class EntityVelocityEvent extends EntityEvent implements CancellableEvent
     }
 
     /**
-     * Gets the enity who will be affected by {@link #getVelocity()}.
-     *
-     * @return the entity
-     */
-    @NotNull
-    @Override
-    public Entity getEntity() {
-        return entity;
-    }
-
-    /**
      * Gets the velocity which will be applied.
      *
      * @return the velocity
