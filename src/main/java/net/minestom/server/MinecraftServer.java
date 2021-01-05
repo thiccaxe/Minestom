@@ -134,6 +134,7 @@ public final class MinecraftServer {
     private static int entityViewDistance = 5;
     private static int compressionThreshold = 256;
     private static boolean packetCaching = true;
+    private static boolean groupedPacket = true;
     private static boolean waitMonitoring = false;
     private static ResponseDataConsumer responseDataConsumer;
     private static String brandName = "Minestom";
@@ -574,14 +575,6 @@ public final class MinecraftServer {
         MinecraftServer.packetCaching = packetCaching;
     }
 
-    public static boolean hasWaitMonitoring() {
-        return waitMonitoring;
-    }
-
-    public static void setWaitMonitoring(boolean waitMonitoring) {
-        MinecraftServer.waitMonitoring = waitMonitoring;
-    }
-
     /**
      * Gets if the packet caching feature is enabled.
      * <p>
@@ -608,6 +601,14 @@ public final class MinecraftServer {
     public static void setGroupedPacket(boolean groupedPacket) {
         Check.stateCondition(started, "You cannot change the grouped packet value after the server has been started.");
         MinecraftServer.groupedPacket = groupedPacket;
+    }
+
+    public static boolean hasWaitMonitoring() {
+        return waitMonitoring;
+    }
+
+    public static void setWaitMonitoring(boolean waitMonitoring) {
+        MinecraftServer.waitMonitoring = waitMonitoring;
     }
 
     /**

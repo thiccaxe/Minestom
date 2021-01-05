@@ -86,17 +86,21 @@ public final class PacketUtils {
         sendGroupedPacketUnwrap(players, packet, null);
     }
 
-    private static void sendPacket(ServerPacket packet, FramedPacket framedPacket, Player player, PlayerValidator playerValidator) {
+    private static void sendPacket(@NotNull ServerPacket packet,
+                                   @NotNull FramedPacket framedPacket,
+                                   @NotNull Player player, @Nullable PlayerValidator playerValidator) {
         final boolean success = PACKET_LISTENER_MANAGER.processServerPacket(packet, player);
         if (!success)
             return;
+
+        final boolean hasGroupedPacket = MinecraftServer.hasGroupedPacket();
 
         // Verify if the player should receive the packet
         if (playerValidator != null && !playerValidator.isValid(player))
             return;
 
         final PlayerConnection playerConnection = player.getPlayerConnection();
-        if (playerConnection instanceof NettyPlayerConnection) {
+        if (hasGroupedPacket && playerConnection instanceof NettyPlayerConnection) {
             final NettyPlayerConnection nettyPlayerConnection = (NettyPlayerConnection) playerConnection;
             nettyPlayerConnection.write(framedPacket);
         } else {
