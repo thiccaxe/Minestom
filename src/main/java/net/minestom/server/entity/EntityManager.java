@@ -4,12 +4,14 @@ import com.google.common.collect.Queues;
 import net.minestom.server.MinecraftServer;
 import net.minestom.server.chat.ChatColor;
 import net.minestom.server.chat.ColoredText;
+import net.minestom.server.entity.fakeplayer.FakePlayerOption;
+import net.minestom.server.event.player.AsyncPlayerPreLoginEvent;
 import net.minestom.server.event.player.PlayerLoginEvent;
-import net.minestom.server.event.player.PlayerPreLoginEvent;
 import net.minestom.server.instance.Instance;
 import net.minestom.server.network.ConnectionManager;
 import net.minestom.server.network.packet.server.play.KeepAlivePacket;
 import net.minestom.server.network.player.PlayerConnection;
+import net.minestom.server.utils.async.AsyncUtils;
 import net.minestom.server.utils.validate.Check;
 import org.jetbrains.annotations.NotNull;
 
@@ -74,13 +76,14 @@ public final class EntityManager {
     }
 
     /**
-     * Calls the player initialization callbacks and the event {@link PlayerPreLoginEvent}.
+     * Calls the player initialization callbacks and the event {@link AsyncPlayerPreLoginEvent}.
      * If the {@link Player} hasn't been kicked, add him to the waiting list.
      * <p>
      * Can be considered as a pre-init thing,
-     * currently executed in {@link Player#Player(UUID, String, PlayerConnection)}.
+     * currently executed in {@link ConnectionManager#createPlayer(UUID, String, PlayerConnection)}
+     * and {@link net.minestom.server.entity.fakeplayer.FakePlayer#initPlayer(UUID, String, FakePlayerOption, Consumer)}.
      *
-     * @param player the {@link Player} to add
+     * @param player the {@link Player player} to add to the waiting list
      */
     public void addWaitingPlayer(@NotNull Player player) {
 
@@ -89,22 +92,33 @@ public final class EntityManager {
             playerInitialization.accept(player);
         }
 
-        // Call pre login event
-        PlayerPreLoginEvent playerPreLoginEvent = new PlayerPreLoginEvent(player, player.getUsername(), player.getUuid());
-        player.callEvent(PlayerPreLoginEvent.class, playerPreLoginEvent);
+        AsyncUtils.runAsync(() -> {
+            // Call pre login event
+            AsyncPlayerPreLoginEvent asyncPlayerPreLoginEvent = new AsyncPlayerPreLoginEvent(player, player.getUsername(), player.getUuid());
+            player.callEvent(AsyncPlayerPreLoginEvent.class, asyncPlayerPreLoginEvent);
 
-        // Ignore the player if he has been disconnected (kick)
-        final boolean online = player.isOnline();
-        if (!online)
-            return;
+            // Ignore the player if he has been disconnected (kick)
+            final boolean online = player.isOnline();
+            if (!online)
+                return;
 
-        // Add him to the list and change his username/uuid if changed
-        this.waitingPlayers.add(player);
+            // Change UUID/Username based on the event
+            {
+                final String username = asyncPlayerPreLoginEvent.getUsername();
+                final UUID uuid = asyncPlayerPreLoginEvent.getPlayerUuid();
 
-        final String username = playerPreLoginEvent.getUsername();
-        final UUID uuid = playerPreLoginEvent.getPlayerUuid();
+                if (!player.getUsername().equals(username)) {
+                    player.setUsername(username);
+                }
 
-        player.setUsername(username);
-        player.setUuid(uuid);
+                if (!player.getUuid().equals(uuid)) {
+                    player.setUuid(uuid);
+                }
+
+            }
+
+            // Add the player to the waiting list
+            this.waitingPlayers.add(player);
+        });
     }
 }

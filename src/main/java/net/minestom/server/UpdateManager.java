@@ -66,10 +66,11 @@ public final class UpdateManager {
         final EntityManager entityManager = MinecraftServer.getEntityManager();
 
         updateExecutionService.scheduleAtFixedRate(() -> {
-            if (stopRequested) {
-                updateExecutionService.shutdown();
-                return;
-            }
+            try {
+                if (stopRequested) {
+                    updateExecutionService.shutdown();
+                    return;
+                }
 
             long currentTime = System.nanoTime();
             final long tickStart = System.currentTimeMillis();
@@ -100,6 +101,9 @@ public final class UpdateManager {
                 Acquisition.resetWaitMonitoring();
             }
 
+            } catch (Exception e) {
+                e.printStackTrace();
+            }
         }, 0, MinecraftServer.TICK_MS, TimeUnit.MILLISECONDS);
     }
 

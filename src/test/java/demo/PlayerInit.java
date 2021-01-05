@@ -10,6 +10,8 @@ import net.minestom.server.entity.damage.DamageType;
 import net.minestom.server.entity.type.monster.EntityZombie;
 import net.minestom.server.event.GlobalEventHandler;
 import net.minestom.server.event.entity.EntityAttackEvent;
+import net.minestom.server.event.entity.EntityPotionAddEvent;
+import net.minestom.server.event.entity.EntityPotionRemoveEvent;
 import net.minestom.server.event.item.ItemDropEvent;
 import net.minestom.server.event.item.PickupItemEvent;
 import net.minestom.server.event.player.*;
@@ -217,7 +219,7 @@ public class PlayerInit {
 
         globalEventHandler.addEventCallback(PlayerSpawnEvent.class, event -> {
             final Player player = event.getPlayer();
-            player.setGameMode(GameMode.SURVIVAL);
+            player.setGameMode(GameMode.CREATIVE);
 
             PlayerInventory inventory = player.getInventory();
             ItemStack itemStack = new ItemStack(Material.STONE, (byte) 64);
@@ -263,6 +265,18 @@ public class PlayerInit {
             // Unload the chunk (save memory) if it has no remaining viewer
             if (chunk.getViewers().isEmpty()) {
                 //player.getInstance().unloadChunk(chunk);
+            }
+        });
+
+        globalEventHandler.addEventCallback(EntityPotionAddEvent.class, event -> {
+            if (event.getEntity() instanceof Player) {
+                ((Player) event.getEntity()).sendMessage("Potion added: " + event.getPotion().getEffect());
+            }
+        });
+
+        globalEventHandler.addEventCallback(EntityPotionRemoveEvent.class, event -> {
+            if (event.getEntity() instanceof Player) {
+                ((Player) event.getEntity()).sendMessage("Potion removed: " + event.getPotion().getEffect());
             }
         });
     }

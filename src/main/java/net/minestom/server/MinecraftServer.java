@@ -145,7 +145,6 @@ public final class MinecraftServer {
         if (minecraftServer != null) // don't init twice
             return minecraftServer;
         extensionManager = new ExtensionManager();
-        extensionManager.loadExtensions();
 
         // warmup/force-init registries
         // without this line, registry types that are not loaded explicitly will have an internal empty registry in Registries
@@ -553,7 +552,8 @@ public final class MinecraftServer {
      * This feature allows some packets (implementing the {@link net.minestom.server.utils.cache.CacheablePacket} to be cached
      * in order to do not have to be written and compressed over and over again), this is especially useful for chunk and light packets.
      * <p>
-     * It is enabled by default and it is our recommendation, you should only disable it if you want to focus on low memory usage
+     * It is enabled by default and it is our recommendation,
+     * you should only disable it if you want to focus on low memory usage
      * at the cost of many packet writing and compression.
      *
      * @return true if the packet caching feature is enabled, false otherwise
@@ -580,6 +580,34 @@ public final class MinecraftServer {
 
     public static void setWaitMonitoring(boolean waitMonitoring) {
         MinecraftServer.waitMonitoring = waitMonitoring;
+    }
+
+    /**
+     * Gets if the packet caching feature is enabled.
+     * <p>
+     * This features allow sending the exact same packet/buffer to multiple connections.
+     * It does provide a great performance benefit by allocating and writing/compressing only once.
+     * <p>
+     * It is enabled by default and it is our recommendation,
+     * you should only disable it if you want to modify packet per-players instead of sharing it.
+     * Disabling the feature would result in performance decrease.
+     *
+     * @return true if the grouped packet feature is enabled, false otherwise
+     */
+    public static boolean hasGroupedPacket() {
+        return groupedPacket;
+    }
+
+    /**
+     * Enables or disable grouped packet.
+     *
+     * @param groupedPacket true to enable grouped packet
+     * @throws IllegalStateException if this is called after the server started
+     * @see #hasGroupedPacket()
+     */
+    public static void setGroupedPacket(boolean groupedPacket) {
+        Check.stateCondition(started, "You cannot change the grouped packet value after the server has been started.");
+        MinecraftServer.groupedPacket = groupedPacket;
     }
 
     /**
@@ -685,7 +713,7 @@ public final class MinecraftServer {
     }
 
     /**
-     * Gets if the server should process netty errors and other unnecessary netty events
+     * Gets if the server should process netty errors and other unnecessary netty events.
      *
      * @return should process netty errors
      */
@@ -694,7 +722,7 @@ public final class MinecraftServer {
     }
 
     /**
-     * Sets if the server should process netty errors and other unnecessary netty events
+     * Sets if the server should process netty errors and other unnecessary netty events.
      * false is faster
      *
      * @param processNettyErrors should process netty errors
@@ -728,15 +756,21 @@ public final class MinecraftServer {
         nettyServer.init();
         nettyServer.start(address, port);
 
-        final long t1 = -System.nanoTime();
-        // Init extensions
-        // TODO: Extensions should handle depending on each other and have a load-order.
-        extensionManager.getExtensions().forEach(Extension::preInitialize);
-        extensionManager.getExtensions().forEach(Extension::initialize);
-        extensionManager.getExtensions().forEach(Extension::postInitialize);
+        if (extensionManager.shouldLoadOnStartup()) {
+            final long loadStartTime = System.nanoTime();
+            // Load extensions
+            extensionManager.loadExtensions();
+            // Init extensions
+            // TODO: Extensions should handle depending on each other and have a load-order.
+            extensionManager.getExtensions().forEach(Extension::preInitialize);
+            extensionManager.getExtensions().forEach(Extension::initialize);
+            extensionManager.getExtensions().forEach(Extension::postInitialize);
 
-        final double loadTime = MathUtils.round((t1 + System.nanoTime()) / 1_000_000D, 2);
-        LOGGER.info("Extensions loaded in {}ms", loadTime);
+            final double loadTime = MathUtils.round((System.nanoTime() - loadStartTime) / 1_000_000D, 2);
+            LOGGER.info("Extensions loaded in {}ms", loadTime);
+        } else {
+            LOGGER.warn("Extension loadOnStartup option is set to false, extensions are therefore neither loaded or initialized.");
+        }
 
         LOGGER.info("Minestom server started successfully.");
     }

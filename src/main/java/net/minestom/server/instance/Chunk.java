@@ -275,6 +275,7 @@ public abstract class Chunk implements Tickable, Viewable, LockedElement, DataCo
      * @param z the block Z
      * @return the {@link CustomBlock} at the position
      */
+    @Nullable
     public CustomBlock getCustomBlock(int x, int y, int z) {
         final short customBlockId = getCustomBlockId(x, y, z);
         return customBlockId != 0 ? BLOCK_MANAGER.getCustomBlock(customBlockId) : null;
@@ -286,6 +287,7 @@ public abstract class Chunk implements Tickable, Viewable, LockedElement, DataCo
      * @param index the block index
      * @return the {@link CustomBlock} at the block index
      */
+    @Nullable
     protected CustomBlock getCustomBlock(int index) {
         final int x = ChunkUtils.blockIndexToChunkPositionX(index);
         final int y = ChunkUtils.blockIndexToChunkPositionY(index);

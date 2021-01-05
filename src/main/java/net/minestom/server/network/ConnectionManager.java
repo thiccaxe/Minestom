@@ -18,6 +18,7 @@ import net.minestom.server.network.player.NettyPlayerConnection;
 import net.minestom.server.network.player.PlayerConnection;
 import net.minestom.server.utils.PacketUtils;
 import net.minestom.server.utils.callback.validator.PlayerValidator;
+import org.apache.commons.lang3.StringUtils;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
@@ -36,9 +37,7 @@ public final class ConnectionManager {
     private final Set<Acquirable<Player>> unmodifiableAcquirablePlayers = Collections.unmodifiableSet(acquirablePlayers);
     private final Set<Player> players = new CopyOnWriteArraySet<>();
     private final Set<Player> unmodifiablePlayers = Collections.unmodifiableSet(players);
-
     private final Map<PlayerConnection, Player> connectionPlayerMap = new ConcurrentHashMap<>();
-
 
     // All the consumers to call once a packet is received
     private final List<ClientPacketConsumer> receiveClientPacketConsumers = new CopyOnWriteArrayList<>();
@@ -51,7 +50,7 @@ public final class ConnectionManager {
     // The consumers to call once a player connect, mostly used to init events
     private final List<Consumer<Player>> playerInitializations = new CopyOnWriteArrayList<>();
 
-    private ColoredText shutdownText = ColoredText.of(ChatColor.RED, "The server is shutting down.");
+    private JsonMessage shutdownText = ColoredText.of(ChatColor.RED, "The server is shutting down.");
 
     /**
      * Gets the {@link Player} linked to a {@link PlayerConnection}.
@@ -87,6 +86,31 @@ public final class ConnectionManager {
     @NotNull
     public Collection<Player> getUnwrapOnlinePlayers() {
         return unmodifiablePlayers;
+    }
+
+    /**
+     * Finds the closest player matching a given username.
+     * <p>
+     *
+     * @param username the player username (can be partial)
+     * @return the closest match, null if no players are online
+     */
+    @Nullable
+    public Acquirable<Player> findPlayer(@NotNull String username) {
+        Acquirable<Player> exact = getPlayer(username);
+        if (exact != null) return exact;
+
+        String lowercase = username.toLowerCase();
+        double currentDistance = 0;
+        for (Acquirable<Player> player : getOnlinePlayers()) {
+            final String unwrapUsername = player.unsafeUnwrap().getUsername().toLowerCase();
+            double distance = StringUtils.getJaroWinklerDistance(lowercase, unwrapUsername);
+            if (distance > currentDistance) {
+                currentDistance = distance;
+                exact = player;
+            }
+        }
+        return exact;
     }
 
     /**
@@ -278,7 +302,7 @@ public final class ConnectionManager {
      * This callback should be exclusively used to add event listeners since it is called directly after a
      * player join (before any chunk is sent) and the client behavior can therefore be unpredictable.
      * You can add your "init" code in {@link net.minestom.server.event.player.PlayerLoginEvent}
-     * or even {@link net.minestom.server.event.player.PlayerPreLoginEvent}.
+     * or even {@link AsyncPlayerPreLoginEvent}.
      *
      * @param playerInitialization the {@link Player} initialization consumer
      */
@@ -292,7 +316,7 @@ public final class ConnectionManager {
      * @return the kick reason in case on a shutdown
      */
     @NotNull
-    public ColoredText getShutdownText() {
+    public JsonMessage getShutdownText() {
         return shutdownText;
     }
 
@@ -302,7 +326,7 @@ public final class ConnectionManager {
      * @param shutdownText the new shutdown kick reason
      * @see #getShutdownText()
      */
-    public void setShutdownText(@NotNull ColoredText shutdownText) {
+    public void setShutdownText(@NotNull JsonMessage shutdownText) {
         this.shutdownText = shutdownText;
     }
 
@@ -332,6 +356,7 @@ public final class ConnectionManager {
     public Player createPlayer(@NotNull UUID uuid, @NotNull String username, @NotNull PlayerConnection connection) {
         final Player player = getPlayerProvider().createPlayer(uuid, username, connection);
         createPlayer(player);
+        MinecraftServer.getEntityManager().addWaitingPlayer(player);
         return player;
     }
 
@@ -343,7 +368,7 @@ public final class ConnectionManager {
      * @param connection the player connection
      * @see PlayerConnection#disconnect() to properly disconnect a player
      */
-    public synchronized void removePlayer(@NotNull PlayerConnection connection) {
+    public void removePlayer(@NotNull PlayerConnection connection) {
         final Player player = this.connectionPlayerMap.get(connection);
         if (player == null)
             return;

@@ -1,6 +1,7 @@
 package net.minestom.server.command.builder;
 
 import net.minestom.server.chat.ChatColor;
+import net.minestom.server.command.builder.arguments.Argument;
 import net.minestom.server.entity.Entity;
 import net.minestom.server.entity.EntityType;
 import net.minestom.server.instance.block.Block;
@@ -14,6 +15,7 @@ import net.minestom.server.utils.math.FloatRange;
 import net.minestom.server.utils.math.IntRange;
 import net.minestom.server.utils.time.UpdateOption;
 import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
 import org.jglrxavpok.hephaistos.nbt.NBT;
 import org.jglrxavpok.hephaistos.nbt.NBTCompound;
 
@@ -33,6 +35,11 @@ import java.util.Map;
 public final class Arguments {
 
     private Map<String, Object> args = new HashMap<>();
+
+    @NotNull
+    public <T> T get(@NotNull Argument<T> argument) {
+        return (T) getObject(argument.getId());
+    }
 
     public boolean getBoolean(@NotNull String id) {
         return (boolean) getObject(id);
@@ -164,4 +171,15 @@ public final class Arguments {
         this.args.clear();
     }
 
+    protected void retrieveDefaultValues(@Nullable Map<String, Object> defaultValuesMap) {
+        if (defaultValuesMap == null)
+            return;
+
+        for (Map.Entry<String, Object> entry : defaultValuesMap.entrySet()) {
+            final String key = entry.getKey();
+            if (!args.containsKey(key))
+                this.args.put(key, entry.getValue());
+        }
+
+    }
 }

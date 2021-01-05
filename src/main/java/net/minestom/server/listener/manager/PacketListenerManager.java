@@ -52,6 +52,7 @@ public final class PacketListenerManager {
         setListener(ClientTeleportConfirmPacket.class, TeleportListener::listener);
         setListener(ClientResourcePackStatusPacket.class, ResourcePackListener::listener);
         setListener(ClientAdvancementTabPacket.class, AdvancementTabListener::listener);
+        setListener(ClientSpectatePacket.class, SpectateListener::listener);
     }
 
     /**
