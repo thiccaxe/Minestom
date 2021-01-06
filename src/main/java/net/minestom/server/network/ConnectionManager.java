@@ -340,7 +340,7 @@ public final class ConnectionManager {
      *
      * @param player the player to add
      */
-    public synchronized void createPlayer(@NotNull Player player) {
+    public synchronized void registerPlayer(@NotNull Player player) {
         this.acquirablePlayers.add(player.getAcquiredElement());
         this.players.add(player);
         this.connectionPlayerMap.put(player.getPlayerConnection(), player);
