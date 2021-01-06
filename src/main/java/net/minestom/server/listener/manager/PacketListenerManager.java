@@ -70,8 +70,7 @@ public final class PacketListenerManager {
 
         // Listener can be null if none has been set before, call PacketConsumer anyway
         if (packetListenerConsumer == null) {
-            LOGGER.error("Packet " + clazz + " does not have any default listener! (The issue comes from Minestom)");
-            return;
+            LOGGER.warn("Packet " + clazz + " does not have any default listener! (The issue comes from Minestom)");
         }
 
         final PacketController packetController = new PacketController();
@@ -83,7 +82,9 @@ public final class PacketListenerManager {
             return;
 
         // Finally execute the listener
-        packetListenerConsumer.accept(packet, player);
+        if (packetListenerConsumer != null) {
+            packetListenerConsumer.accept(packet, player);
+        }
     }
 
     /**

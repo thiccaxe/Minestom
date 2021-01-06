@@ -692,7 +692,7 @@ public abstract class Entity implements Tickable, Viewable, LockedElement, Event
      *
      * @param uuid the new entity uuid
      */
-    protected void setUuid(@NotNull UUID uuid) {
+    public void setUuid(@NotNull UUID uuid) {
         // Refresh internal map
         Entity.entityByUuid.remove(this.uuid);
         Entity.entityByUuid.put(uuid, this);

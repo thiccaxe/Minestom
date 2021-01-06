@@ -31,10 +31,12 @@ import net.minestom.server.item.ItemStack;
 import net.minestom.server.item.Material;
 import net.minestom.server.listener.PlayerDiggingListener;
 import net.minestom.server.network.ConnectionManager;
+import net.minestom.server.network.ConnectionState;
 import net.minestom.server.network.PlayerProvider;
 import net.minestom.server.network.packet.client.ClientPlayPacket;
 import net.minestom.server.network.packet.client.play.ClientChatMessagePacket;
 import net.minestom.server.network.packet.server.ServerPacket;
+import net.minestom.server.network.packet.server.login.LoginDisconnectPacket;
 import net.minestom.server.network.packet.server.play.*;
 import net.minestom.server.network.player.NettyPlayerConnection;
 import net.minestom.server.network.player.PlayerConnection;
@@ -659,10 +661,9 @@ public class Player extends LivingEntity implements CommandSender {
      * it is possible for this method to be non-blocking when retrieving chunks is required.
      *
      * @param instance      the new player instance
-     * @param spawnPosition the new position of the player,
-     *                      can be null or {@link #getPosition()} if you do not want to teleport the player
+     * @param spawnPosition the new position of the player
      */
-    public void setInstance(@NotNull Instance instance, @Nullable Position spawnPosition) {
+    public void setInstance(@NotNull Instance instance, @NotNull Position spawnPosition) {
         Check.notNull(instance, "instance cannot be null!");
         Check.argCondition(this.instance == instance, "Instance should be different than the current one");
 
@@ -717,7 +718,7 @@ public class Player extends LivingEntity implements CommandSender {
 
     /**
      * Changes the player instance without changing its position (defaulted to {@link #getRespawnPoint()}
-     * if the player is not in any instance.
+     * if the player is not in any instance).
      *
      * @param instance the new player instance
      * @see #setInstance(Instance, Position)
@@ -1285,7 +1286,7 @@ public class Player extends LivingEntity implements CommandSender {
      *
      * @param username the new player name
      */
-    protected void setUsername(@NotNull String username) {
+    public void setUsernameField(@NotNull String username) {
         this.username = username;
     }
 
@@ -1739,8 +1740,16 @@ public class Player extends LivingEntity implements CommandSender {
      * @param text the kick reason
      */
     public void kick(@NotNull JsonMessage text) {
-        DisconnectPacket disconnectPacket = new DisconnectPacket();
-        disconnectPacket.message = text;
+        final ConnectionState connectionState = playerConnection.getConnectionState();
+
+        // Packet type depends on the current player connection state
+        final ServerPacket disconnectPacket;
+        if (connectionState == ConnectionState.LOGIN) {
+            disconnectPacket = new LoginDisconnectPacket(text);
+        } else {
+            disconnectPacket = new DisconnectPacket(text);
+        }
+
         playerConnection.sendPacket(disconnectPacket);
         playerConnection.refreshOnline(false);
     }
