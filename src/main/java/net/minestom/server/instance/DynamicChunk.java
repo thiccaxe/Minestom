@@ -128,7 +128,7 @@ public class DynamicChunk extends Chunk {
     }
 
     @Override
-    public void tick(long time, @NotNull Instance instance) {
+    public void tick(long time) {
         if (updatableBlocks.isEmpty())
             return;
 
@@ -396,8 +396,8 @@ public class DynamicChunk extends Chunk {
 
     @NotNull
     @Override
-    public Chunk copy(int chunkX, int chunkZ) {
-        DynamicChunk dynamicChunk = new DynamicChunk(biomes.clone(), chunkX, chunkZ);
+    public Chunk copy(@NotNull Instance instance, int chunkX, int chunkZ) {
+        DynamicChunk dynamicChunk = new DynamicChunk(instance, biomes.clone(), chunkX, chunkZ);
         dynamicChunk.blockPalette = blockPalette.clone();
         dynamicChunk.customBlockPalette = customBlockPalette.clone();
         dynamicChunk.blocksData.putAll(blocksData);
