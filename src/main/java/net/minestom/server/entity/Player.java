@@ -30,8 +30,6 @@ import net.minestom.server.inventory.PlayerInventory;
 import net.minestom.server.item.ItemStack;
 import net.minestom.server.item.Material;
 import net.minestom.server.listener.PlayerDiggingListener;
-import net.minestom.server.lock.Acquirable;
-import net.minestom.server.lock.Acquisition;
 import net.minestom.server.network.ConnectionManager;
 import net.minestom.server.network.PlayerProvider;
 import net.minestom.server.network.packet.client.ClientPlayPacket;
@@ -325,40 +323,6 @@ public class Player extends LivingEntity implements CommandSender {
 
     @Override
     public void update(long time) {
-
-        {
-            //System.out.println("hey " + hashCode()+" "+acquirablePlayer.getHandler().getPeriodIdentifier());
-
-            if (true) {
-                Collection<Acquirable<Entity>> collection = new ArrayList<>();
-                for (Player p : MinecraftServer.getConnectionManager().getUnwrapOnlinePlayers()) {
-                    collection.add(p.getAcquiredElement());
-                }
-
-                Acquisition.acquire(collection, ArrayList::new, entities -> {
-                    //System.out.println("test " + entities.size());
-                });
-
-            }
-
-            if (false) {
-                for (Player p : MinecraftServer.getConnectionManager().getUnwrapOnlinePlayers()) {
-                    //System.out.println("THREAD "+Thread.currentThread().getName());
-                    //System.out.println("test "+p.getAcquiredElement().getHandler().getPeriodIdentifier());
-                    //System.out.println("test2 "+acquirablePlayer.getHandler().getPeriodIdentifier());
-                    long nano = System.nanoTime();
-                    p.getAcquiredElement().acquire(entity -> {
-                        final long finalTime = System.nanoTime() - nano;
-                        // System.out.println("here work " + finalTime);
-                        //((Player)entity).chat("hey "+entity.getEntityId());
-                        //System.out.println("final time " + ((double)finalTime/1e6d));
-                        //System.out.println("get player id " + entity.getEntityId());
-                    });
-                }
-            }
-
-        }
-
         // Network tick
         this.playerConnection.update();
 

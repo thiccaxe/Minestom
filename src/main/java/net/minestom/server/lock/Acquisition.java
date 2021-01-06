@@ -39,7 +39,7 @@ public final class Acquisition {
         }, 3, 3, TimeUnit.MILLISECONDS);
     }
 
-    public static <E, T extends Acquirable<E>> void acquire(Collection<T> collection,
+    public static <E, T extends Acquirable<E>> void acquireCollection(Collection<T> collection,
                                                             Supplier<Collection<E>> collectionSupplier,
                                                             Consumer<Collection<E>> consumer) {
         final Thread currentThread = Thread.currentThread();
