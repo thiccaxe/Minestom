@@ -15,6 +15,7 @@ import net.minestom.server.instance.batch.ChunkBatch;
 import net.minestom.server.instance.block.Block;
 import net.minestom.server.instance.block.CustomBlock;
 import net.minestom.server.instance.block.rule.BlockPlacementRule;
+import net.minestom.server.lock.Acquirable;
 import net.minestom.server.network.packet.server.play.BlockChangePacket;
 import net.minestom.server.network.packet.server.play.EffectPacket;
 import net.minestom.server.network.packet.server.play.UnloadChunkPacket;
@@ -399,7 +400,7 @@ public class InstanceContainer extends Instance {
                 effectPacket.data = blockStateId;
                 effectPacket.disableRelativeVolume = false;
 
-                PacketUtils.sendGroupedPacketUnwrap(chunk.getViewers(), effectPacket,
+                PacketUtils.sendGroupedPacket(chunk.getViewers(), effectPacket,
                         (viewer) -> {
                             // Prevent the block breaker to play the particles and sound two times
                             return (customBlock != null && customBlock.enableCustomBreakDelay()) || !viewer.equals(player);
@@ -817,8 +818,8 @@ public class InstanceContainer extends Instance {
                 unloadChunkPacket.chunkZ = chunkZ;
                 chunk.sendPacketToViewers(unloadChunkPacket);
 
-                for (Player viewer : chunk.getViewers()) {
-                    chunk.removeViewer(viewer);
+                for (Acquirable<Player> viewer : chunk.getViewers()) {
+                    chunk.removeViewer(viewer.unsafeUnwrap());
                 }
 
                 callChunkUnloadEvent(chunkX, chunkZ);

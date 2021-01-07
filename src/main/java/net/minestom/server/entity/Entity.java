@@ -99,8 +99,8 @@ public abstract class Entity implements Tickable, Viewable, LockedElement, Event
 
     private boolean autoViewable;
     private final int id;
-    protected final Set<Player> viewers = new CopyOnWriteArraySet<>();
-    private final Set<Player> unmodifiableViewers = Collections.unmodifiableSet(viewers);
+    protected final Set<Acquirable<Player>> viewers = new CopyOnWriteArraySet<>();
+    private final Set<Acquirable<Player>> unmodifiableViewers = Collections.unmodifiableSet(viewers);
     private Data data;
     private final Set<Permission> permissions = new CopyOnWriteArraySet<>();
 
@@ -331,7 +331,7 @@ public abstract class Entity implements Tickable, Viewable, LockedElement, Event
     @Override
     public boolean addViewer(@NotNull Player player) {
         Check.notNull(player, "Viewer cannot be null");
-        boolean result = this.viewers.add(player);
+        boolean result = this.viewers.add(player.getAcquiredElement());
         if (!result)
             return false;
         player.viewableEntities.add(this);
@@ -341,7 +341,7 @@ public abstract class Entity implements Tickable, Viewable, LockedElement, Event
     @Override
     public boolean removeViewer(@NotNull Player player) {
         Check.notNull(player, "Viewer cannot be null");
-        if (!viewers.remove(player))
+        if (!viewers.remove(player.getAcquiredElement()))
             return false;
 
         DestroyEntitiesPacket destroyEntitiesPacket = new DestroyEntitiesPacket();
@@ -353,7 +353,7 @@ public abstract class Entity implements Tickable, Viewable, LockedElement, Event
 
     @NotNull
     @Override
-    public Set<Player> getViewers() {
+    public Set<Acquirable<Player>> getViewers() {
         return unmodifiableViewers;
     }
 

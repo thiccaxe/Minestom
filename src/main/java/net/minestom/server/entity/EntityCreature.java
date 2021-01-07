@@ -173,9 +173,9 @@ public abstract class EntityCreature extends LivingEntity implements NavigableEn
         synchronized (entityTypeLock) {
             this.entityType = entityType;
 
-            Set<Player> viewers = new HashSet<>(getViewers());
-            getViewers().forEach(this::removeViewer);
-            viewers.forEach(this::addViewer);
+            Set<Acquirable<Player>> viewers = new HashSet<>(getViewers());
+            removeViewers();
+            viewers.forEach(acquirablePlayer -> addViewer(acquirablePlayer.unsafeUnwrap()));
         }
     }
 

@@ -31,7 +31,6 @@ public final class PacketUtils {
     private final static byte[] buffer = new byte[8192];
 
     private PacketUtils() {
-
     }
 
     public static void sendGroupedPacket(@NotNull Collection<Acquirable<Player>> players, @NotNull ServerPacket packet,
@@ -51,39 +50,6 @@ public final class PacketUtils {
 
     public static void sendGroupedPacket(@NotNull Collection<Acquirable<Player>> players, @NotNull ServerPacket packet) {
         sendGroupedPacket(players, packet, null);
-    }
-
-    /**
-     * Sends a {@link ServerPacket} to multiple players.
-     * <p>
-     * Can drastically improve performance since the packet will not have to be processed as much.
-     *
-     * @param players         the players to send the packet to
-     * @param packet          the packet to send to the players
-     * @param playerValidator optional callback to check if a specify player of {@code players} should receive the packet
-     */
-    public static void sendGroupedPacketUnwrap(@NotNull Collection<Player> players, @NotNull ServerPacket packet,
-                                               @Nullable PlayerValidator playerValidator) {
-        if (players.isEmpty())
-            return;
-
-        final ByteBuf finalBuffer = createFramedPacket(packet, false);
-        final FramedPacket framedPacket = new FramedPacket(finalBuffer);
-
-        // Send packet to all players
-        for (Player player : players) {
-            sendPacket(packet, framedPacket, player, playerValidator);
-        }
-    }
-
-    /**
-     * Same as {@link #sendGroupedPacket(Collection, ServerPacket, PlayerValidator)}
-     * but with the player validator sets to null.
-     *
-     * @see #sendGroupedPacket(Collection, ServerPacket, PlayerValidator)
-     */
-    public static void sendGroupedPacketUnwrap(@NotNull Collection<Player> players, @NotNull ServerPacket packet) {
-        sendGroupedPacketUnwrap(players, packet, null);
     }
 
     private static void sendPacket(@NotNull ServerPacket packet,

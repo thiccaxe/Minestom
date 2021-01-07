@@ -6,6 +6,7 @@ import net.minestom.server.chat.JsonMessage;
 import net.minestom.server.entity.Player;
 import net.minestom.server.entity.type.decoration.EntityArmorStand;
 import net.minestom.server.instance.Instance;
+import net.minestom.server.lock.Acquirable;
 import net.minestom.server.utils.Position;
 import net.minestom.server.utils.validate.Check;
 import org.jetbrains.annotations.NotNull;
@@ -118,7 +119,7 @@ public class Hologram implements Viewable {
 
     @NotNull
     @Override
-    public Set<Player> getViewers() {
+    public Set<Acquirable<Player>> getViewers() {
         return entity.getViewers();
     }
 

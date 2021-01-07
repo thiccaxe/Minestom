@@ -11,6 +11,7 @@ import net.minestom.server.inventory.click.InventoryClickResult;
 import net.minestom.server.inventory.condition.InventoryCondition;
 import net.minestom.server.item.ItemStack;
 import net.minestom.server.item.StackingRule;
+import net.minestom.server.lock.Acquirable;
 import net.minestom.server.network.packet.server.play.OpenWindowPacket;
 import net.minestom.server.network.packet.server.play.SetSlotPacket;
 import net.minestom.server.network.packet.server.play.WindowItemsPacket;
@@ -57,8 +58,8 @@ public class Inventory implements InventoryModifier, InventoryClickHandler, View
     // the items in this inventory
     private final ItemStack[] itemStacks;
     // the players currently viewing this inventory
-    private final Set<Player> viewers = new CopyOnWriteArraySet<>();
-    private final Set<Player> unmodifiableViewers = Collections.unmodifiableSet(viewers);
+    private final Set<Acquirable<Player>> viewers = new CopyOnWriteArraySet<>();
+    private final Set<Acquirable<Player>> unmodifiableViewers = Collections.unmodifiableSet(viewers);
     // (player -> cursor item) map, used by the click listeners
     private final ConcurrentHashMap<Player, ItemStack> cursorPlayersItem = new ConcurrentHashMap<>();
 
@@ -233,7 +234,7 @@ public class Inventory implements InventoryModifier, InventoryClickHandler, View
      * @param player the player to update the inventory
      */
     public void update(@NotNull Player player) {
-        if (!getViewers().contains(player))
+        if (!isViewer(player))
             return;
 
         final PlayerConnection playerConnection = player.getPlayerConnection();
@@ -251,7 +252,7 @@ public class Inventory implements InventoryModifier, InventoryClickHandler, View
 
     @NotNull
     @Override
-    public Set<Player> getViewers() {
+    public Set<Acquirable<Player>> getViewers() {
         return unmodifiableViewers;
     }
 
@@ -263,7 +264,7 @@ public class Inventory implements InventoryModifier, InventoryClickHandler, View
      */
     @Override
     public boolean addViewer(@NotNull Player player) {
-        final boolean result = this.viewers.add(player);
+        final boolean result = this.viewers.add(player.getAcquiredElement());
         update(player);
         return result;
     }
@@ -276,7 +277,7 @@ public class Inventory implements InventoryModifier, InventoryClickHandler, View
      */
     @Override
     public boolean removeViewer(@NotNull Player player) {
-        final boolean result = this.viewers.remove(player);
+        final boolean result = this.viewers.remove(player.getAcquiredElement());
         this.cursorPlayersItem.remove(player);
         this.clickProcessor.clearCache(player);
         return result;

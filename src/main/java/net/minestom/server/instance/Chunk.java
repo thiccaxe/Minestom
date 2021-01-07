@@ -22,7 +22,6 @@ import net.minestom.server.network.packet.server.play.ChunkDataPacket;
 import net.minestom.server.network.packet.server.play.UpdateLightPacket;
 import net.minestom.server.network.player.PlayerConnection;
 import net.minestom.server.utils.MathUtils;
-import net.minestom.server.utils.PacketUtils;
 import net.minestom.server.utils.Position;
 import net.minestom.server.utils.binary.BinaryReader;
 import net.minestom.server.utils.chunk.ChunkCallback;
@@ -80,8 +79,8 @@ public abstract class Chunk implements Tickable, Viewable, LockedElement, DataCo
     private boolean readOnly;
 
     protected volatile boolean loaded = true;
-    protected final Set<Player> viewers = new CopyOnWriteArraySet<>();
-    private final Set<Player> unmodifiableViewers = Collections.unmodifiableSet(viewers);
+    protected final Set<Acquirable<Player>> viewers = new CopyOnWriteArraySet<>();
+    private final Set<Acquirable<Player>> unmodifiableViewers = Collections.unmodifiableSet(viewers);
 
     // Path finding
     protected PFColumnarSpace columnarSpace;
@@ -472,7 +471,7 @@ public abstract class Chunk implements Tickable, Viewable, LockedElement, DataCo
      */
     @Override
     public boolean addViewer(@NotNull Player player) {
-        final boolean result = this.viewers.add(player);
+        final boolean result = this.viewers.add(player.getAcquiredElement());
 
         // Add to the viewable chunks set
         player.getViewableChunks().add(this);
@@ -497,7 +496,7 @@ public abstract class Chunk implements Tickable, Viewable, LockedElement, DataCo
      */
     @Override
     public boolean removeViewer(@NotNull Player player) {
-        final boolean result = this.viewers.remove(player);
+        final boolean result = this.viewers.remove(player.getAcquiredElement());
 
         // Remove from the viewable chunks set
         player.getViewableChunks().remove(this);
@@ -512,7 +511,7 @@ public abstract class Chunk implements Tickable, Viewable, LockedElement, DataCo
 
     @NotNull
     @Override
-    public Set<Player> getViewers() {
+    public Set<Acquirable<Player>> getViewers() {
         return unmodifiableViewers;
     }
 
@@ -574,7 +573,7 @@ public abstract class Chunk implements Tickable, Viewable, LockedElement, DataCo
      * Sends a full {@link ChunkDataPacket} to all chunk viewers.
      */
     public synchronized void sendChunkUpdate() {
-        PacketUtils.sendGroupedPacketUnwrap(getViewers(), getFreshFullDataPacket());
+        sendPacketToViewers(getFreshFullDataPacket());
     }
 
     /**

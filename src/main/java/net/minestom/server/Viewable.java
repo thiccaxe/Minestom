@@ -1,6 +1,7 @@
 package net.minestom.server;
 
 import net.minestom.server.entity.Player;
+import net.minestom.server.lock.Acquirable;
 import net.minestom.server.network.packet.server.ServerPacket;
 import net.minestom.server.utils.PacketUtils;
 import org.jetbrains.annotations.NotNull;
@@ -28,13 +29,19 @@ public interface Viewable {
      */
     boolean removeViewer(@NotNull Player player);
 
+    default void removeViewers() {
+        getViewers().forEach(acquirablePlayer -> {
+            removeViewer(acquirablePlayer.unsafeUnwrap());
+        });
+    }
+
     /**
      * Gets all the viewers of this viewable element.
      *
      * @return A Set containing all the element's viewers
      */
     @NotNull
-    Set<Player> getViewers();
+    Set<Acquirable<Player>> getViewers();
 
     /**
      * Gets if a player is seeing this viewable object.
@@ -43,7 +50,7 @@ public interface Viewable {
      * @return true if {@code player} is a viewer, false otherwise
      */
     default boolean isViewer(@NotNull Player player) {
-        return getViewers().contains(player);
+        return getViewers().contains(player.getAcquiredElement());
     }
 
     /**
@@ -55,7 +62,7 @@ public interface Viewable {
      * @param packet the packet to send to all viewers
      */
     default void sendPacketToViewers(@NotNull ServerPacket packet) {
-        PacketUtils.sendGroupedPacketUnwrap(getViewers(), packet);
+        PacketUtils.sendGroupedPacket(getViewers(), packet);
     }
 
     /**
@@ -68,7 +75,7 @@ public interface Viewable {
      */
     default void sendPacketsToViewers(@NotNull ServerPacket... packets) {
         for (ServerPacket packet : packets) {
-            PacketUtils.sendGroupedPacketUnwrap(getViewers(), packet);
+            PacketUtils.sendGroupedPacket(getViewers(), packet);
         }
     }
 

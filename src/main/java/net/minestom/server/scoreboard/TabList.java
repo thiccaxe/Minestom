@@ -1,6 +1,7 @@
 package net.minestom.server.scoreboard;
 
 import net.minestom.server.entity.Player;
+import net.minestom.server.lock.Acquirable;
 import net.minestom.server.network.packet.server.play.ScoreboardObjectivePacket;
 import net.minestom.server.network.player.PlayerConnection;
 import org.jetbrains.annotations.NotNull;
@@ -19,8 +20,8 @@ public class TabList implements Scoreboard {
      */
     private static final String TAB_LIST_PREFIX = "tl-";
 
-    private final Set<Player> viewers = new CopyOnWriteArraySet<>();
-    private final Set<Player> unmodifiableViewers = Collections.unmodifiableSet(viewers);
+    private final Set<Acquirable<Player>> viewers = new CopyOnWriteArraySet<>();
+    private final Set<Acquirable<Player>> unmodifiableViewers = Collections.unmodifiableSet(viewers);
     private final String objectiveName;
 
     private ScoreboardObjectivePacket.Type type;
@@ -51,7 +52,7 @@ public class TabList implements Scoreboard {
 
     @Override
     public boolean addViewer(@NotNull Player player) {
-        boolean result = this.viewers.add(player);
+        boolean result = this.viewers.add(player.getAcquiredElement());
         PlayerConnection connection = player.getPlayerConnection();
 
         if (result) {
@@ -64,7 +65,7 @@ public class TabList implements Scoreboard {
 
     @Override
     public boolean removeViewer(@NotNull Player player) {
-        boolean result = this.viewers.remove(player);
+        boolean result = this.viewers.remove(player.getAcquiredElement());
         PlayerConnection connection = player.getPlayerConnection();
 
         if (result) {
@@ -76,7 +77,7 @@ public class TabList implements Scoreboard {
 
     @NotNull
     @Override
-    public Set<Player> getViewers() {
+    public Set<Acquirable<Player>> getViewers() {
         return unmodifiableViewers;
     }
 

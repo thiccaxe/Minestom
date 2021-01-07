@@ -4,6 +4,7 @@ import net.minestom.server.chat.JsonMessage;
 import net.minestom.server.entity.Player;
 import net.minestom.server.item.ItemStack;
 import net.minestom.server.item.Material;
+import net.minestom.server.lock.Acquirable;
 import net.minestom.server.network.packet.server.play.AdvancementsPacket;
 import net.minestom.server.utils.PacketUtils;
 import org.jetbrains.annotations.NotNull;
@@ -374,11 +375,11 @@ public class Advancement {
         updateCriteria();
 
         if (tab != null) {
-            final Set<Player> viewers = tab.getViewers();
+            final Set<Acquirable<Player>> viewers = tab.getViewers();
             AdvancementsPacket createPacket = tab.createPacket();
 
-            PacketUtils.sendGroupedPacketUnwrap(viewers, tab.removePacket);
-            PacketUtils.sendGroupedPacketUnwrap(viewers, createPacket);
+            PacketUtils.sendGroupedPacket(viewers, tab.removePacket);
+            PacketUtils.sendGroupedPacket(viewers, createPacket);
         }
     }
 

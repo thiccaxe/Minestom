@@ -87,14 +87,14 @@ public abstract class Instance implements BlockModifier, Tickable, LockedElement
     private final Map<Class<? extends Event>, Collection<EventCallback>> eventCallbacks = new ConcurrentHashMap<>();
 
     // Entities present in this instance
-    protected final Set<Entity> entities = new CopyOnWriteArraySet<>();
-    protected final Set<Player> players = new CopyOnWriteArraySet<>();
-    protected final Set<EntityCreature> creatures = new CopyOnWriteArraySet<>();
-    protected final Set<ObjectEntity> objectEntities = new CopyOnWriteArraySet<>();
-    protected final Set<ExperienceOrb> experienceOrbs = new CopyOnWriteArraySet<>();
+    protected final Set<Acquirable<Entity>> entities = new CopyOnWriteArraySet<>();
+    protected final Set<Acquirable<Player>> players = new CopyOnWriteArraySet<>();
+    protected final Set<Acquirable<EntityCreature>> creatures = new CopyOnWriteArraySet<>();
+    protected final Set<Acquirable<ObjectEntity>> objectEntities = new CopyOnWriteArraySet<>();
+    protected final Set<Acquirable<ExperienceOrb>> experienceOrbs = new CopyOnWriteArraySet<>();
     // Entities per chunk
     protected final Long2ObjectMap<Set<Entity>> chunkEntities = Long2ObjectMaps.synchronize(new Long2ObjectOpenHashMap<>());
-    private Object entitiesLock = new Object(); // Lock used to prevent the entities Set and Map to be subject to race condition
+    private final Object entitiesLock = new Object(); // Lock used to prevent the entities Set and Map to be subject to race condition
 
     // the uuid of this instance
     protected UUID uniqueId;
@@ -385,7 +385,7 @@ public abstract class Instance implements BlockModifier, Tickable, LockedElement
      */
     public void setTime(long time) {
         this.time = time;
-        PacketUtils.sendGroupedPacketUnwrap(getPlayers(), createTimePacket());
+        PacketUtils.sendGroupedPacket(getPlayers(), createTimePacket());
     }
 
     /**
@@ -461,7 +461,7 @@ public abstract class Instance implements BlockModifier, Tickable, LockedElement
      * @return an unmodifiable {@link Set} containing all the entities in the instance
      */
     @NotNull
-    public Set<Entity> getEntities() {
+    public Set<Acquirable<Entity>> getEntities() {
         return Collections.unmodifiableSet(entities);
     }
 
@@ -471,7 +471,7 @@ public abstract class Instance implements BlockModifier, Tickable, LockedElement
      * @return an unmodifiable {@link Set} containing all the players in the instance
      */
     @NotNull
-    public Set<Player> getPlayers() {
+    public Set<Acquirable<Player>> getPlayers() {
         return Collections.unmodifiableSet(players);
     }
 
@@ -481,7 +481,7 @@ public abstract class Instance implements BlockModifier, Tickable, LockedElement
      * @return an unmodifiable {@link Set} containing all the creatures in the instance
      */
     @NotNull
-    public Set<EntityCreature> getCreatures() {
+    public Set<Acquirable<EntityCreature>> getCreatures() {
         return Collections.unmodifiableSet(creatures);
     }
 
@@ -491,7 +491,7 @@ public abstract class Instance implements BlockModifier, Tickable, LockedElement
      * @return an unmodifiable {@link Set} containing all the object entities in the instance
      */
     @NotNull
-    public Set<ObjectEntity> getObjectEntities() {
+    public Set<Acquirable<ObjectEntity>> getObjectEntities() {
         return Collections.unmodifiableSet(objectEntities);
     }
 
@@ -501,7 +501,7 @@ public abstract class Instance implements BlockModifier, Tickable, LockedElement
      * @return an unmodifiable {@link Set} containing all the experience orbs in the instance
      */
     @NotNull
-    public Set<ExperienceOrb> getExperienceOrbs() {
+    public Set<Acquirable<ExperienceOrb>> getExperienceOrbs() {
         return Collections.unmodifiableSet(experienceOrbs);
     }
 
@@ -903,7 +903,7 @@ public abstract class Instance implements BlockModifier, Tickable, LockedElement
         RemoveEntityFromInstanceEvent event = new RemoveEntityFromInstanceEvent(this, entity);
         callCancellableEvent(RemoveEntityFromInstanceEvent.class, event, () -> {
             // Remove this entity from players viewable list and send delete entities packet
-            entity.getViewers().forEach(entity::removeViewer);
+            entity.removeViewers();
 
             // Remove the entity from cache
             final Chunk chunk = getChunkAt(entity.getPosition());
@@ -942,15 +942,15 @@ public abstract class Instance implements BlockModifier, Tickable, LockedElement
             Set<Entity> entities = getEntitiesInChunk(chunkIndex);
             entities.add(entity);
 
-            this.entities.add(entity);
+            this.entities.add(entity.getAcquiredElement());
             if (entity instanceof Player) {
-                this.players.add((Player) entity);
+                this.players.add(entity.getAcquiredElement());
             } else if (entity instanceof EntityCreature) {
-                this.creatures.add((EntityCreature) entity);
+                this.creatures.add(entity.getAcquiredElement());
             } else if (entity instanceof ObjectEntity) {
-                this.objectEntities.add((ObjectEntity) entity);
+                this.objectEntities.add(entity.getAcquiredElement());
             } else if (entity instanceof ExperienceOrb) {
-                this.experienceOrbs.add((ExperienceOrb) entity);
+                this.experienceOrbs.add(entity.getAcquiredElement());
             }
         }
     }
@@ -1024,7 +1024,7 @@ public abstract class Instance implements BlockModifier, Tickable, LockedElement
 
             // time needs to be send to players
             if (timeUpdate != null && !CooldownUtils.hasCooldown(time, lastTimeUpdate, timeUpdate)) {
-                PacketUtils.sendGroupedPacketUnwrap(getPlayers(), createTimePacket());
+                PacketUtils.sendGroupedPacket(getPlayers(), createTimePacket());
                 this.lastTimeUpdate = time;
             }
 

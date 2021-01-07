@@ -1247,7 +1247,8 @@ public class Player extends LivingEntity implements CommandSender {
             sendPacketToViewers(destroyEntitiesPacket);
 
             // Show player again
-            getViewers().forEach(player -> showPlayer(player.getPlayerConnection()));
+            getViewers().forEach(acquirablePlayer ->
+                    showPlayer(acquirablePlayer.unsafeUnwrap().getPlayerConnection()));
         }
 
         getInventory().update();
@@ -1595,11 +1596,11 @@ public class Player extends LivingEntity implements CommandSender {
 
         // Manage entities in unchecked chunks
         EntityUtils.forEachRange(instance, newChunk.toPosition(), entityViewDistance, entity -> {
-            if (entity.isAutoViewable() && !entity.viewers.contains(this)) {
+            if (entity.isAutoViewable() && !entity.isViewer(this)) {
                 entity.addViewer(this);
             }
 
-            if (entity instanceof Player && isAutoViewable() && !viewers.contains(entity)) {
+            if (entity instanceof Player && isAutoViewable() && !isViewer((Player) entity)) {
                 addViewer((Player) entity);
             }
         });

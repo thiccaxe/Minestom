@@ -6,6 +6,7 @@ import net.minestom.server.chat.ChatParser;
 import net.minestom.server.chat.ColoredText;
 import net.minestom.server.chat.JsonMessage;
 import net.minestom.server.entity.Player;
+import net.minestom.server.lock.Acquirable;
 import net.minestom.server.network.packet.server.play.DisplayScoreboardPacket;
 import net.minestom.server.network.packet.server.play.ScoreboardObjectivePacket;
 import net.minestom.server.network.packet.server.play.TeamsPacket;
@@ -47,8 +48,8 @@ public class Sidebar implements Scoreboard {
      */
     private static final int MAX_LINES_COUNT = 15;
 
-    private final Set<Player> viewers = new CopyOnWriteArraySet<>();
-    private final Set<Player> unmodifiableViewers = Collections.unmodifiableSet(viewers);
+    private final Set<Acquirable<Player>> viewers = new CopyOnWriteArraySet<>();
+    private final Set<Acquirable<Player>> unmodifiableViewers = Collections.unmodifiableSet(viewers);
 
     private final Queue<ScoreboardLine> lines = Queues.newConcurrentLinkedQueue();
     private final IntLinkedOpenHashSet availableColors = new IntLinkedOpenHashSet();
@@ -188,7 +189,7 @@ public class Sidebar implements Scoreboard {
 
     @Override
     public boolean addViewer(@NotNull Player player) {
-        final boolean result = this.viewers.add(player);
+        final boolean result = this.viewers.add(player.getAcquiredElement());
         PlayerConnection playerConnection = player.getPlayerConnection();
 
         ScoreboardObjectivePacket scoreboardObjectivePacket = this.getCreationObjectivePacket(this.title, ScoreboardObjectivePacket.Type.INTEGER);
@@ -206,7 +207,7 @@ public class Sidebar implements Scoreboard {
 
     @Override
     public boolean removeViewer(@NotNull Player player) {
-        final boolean result = this.viewers.remove(player);
+        final boolean result = this.viewers.remove(player.getAcquiredElement());
         PlayerConnection playerConnection = player.getPlayerConnection();
         ScoreboardObjectivePacket scoreboardObjectivePacket = this.getDestructionObjectivePacket();
         playerConnection.sendPacket(scoreboardObjectivePacket);
@@ -220,7 +221,7 @@ public class Sidebar implements Scoreboard {
 
     @NotNull
     @Override
-    public Set<Player> getViewers() {
+    public Set<Acquirable<Player>> getViewers() {
         return unmodifiableViewers;
     }
 
