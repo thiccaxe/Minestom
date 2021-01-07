@@ -118,6 +118,8 @@ public abstract class Instance implements BlockModifier, Tickable, LockedElement
      * @param dimensionType the {@link DimensionType} of the instance
      */
     public Instance(@NotNull UUID uniqueId, @NotNull DimensionType dimensionType) {
+        Check.argCondition(!dimensionType.isRegistered(),
+                "The dimension " + dimensionType.getName() + " is not registered! Please use DimensionTypeManager#addDimension");
         this.uniqueId = uniqueId;
         this.dimensionType = dimensionType;
 
@@ -622,7 +624,9 @@ public abstract class Instance implements BlockModifier, Tickable, LockedElement
     public short getBlockStateId(int x, int y, int z) {
         final Chunk chunk = getChunkAt(x, z);
         Check.notNull(chunk, "The chunk at " + x + ":" + z + " is not loaded");
-        return chunk.getBlockStateId(x, y, z);
+        synchronized (chunk) {
+            return chunk.getBlockStateId(x, y, z);
+        }
     }
 
     /**
@@ -659,7 +663,9 @@ public abstract class Instance implements BlockModifier, Tickable, LockedElement
     public CustomBlock getCustomBlock(int x, int y, int z) {
         final Chunk chunk = getChunkAt(x, z);
         Check.notNull(chunk, "The chunk at " + x + ":" + z + " is not loaded");
-        return chunk.getCustomBlock(x, y, z);
+        synchronized (chunk) {
+            return chunk.getCustomBlock(x, y, z);
+        }
     }
 
     /**
@@ -709,7 +715,9 @@ public abstract class Instance implements BlockModifier, Tickable, LockedElement
         final Chunk chunk = getChunkAt(x, z);
         Check.notNull(chunk, "The chunk at " + x + ":" + z + " is not loaded");
         final int index = ChunkUtils.getBlockIndex(x, y, z);
-        return chunk.getBlockData(index);
+        synchronized (chunk) {
+            return chunk.getBlockData(index);
+        }
     }
 
     /**
