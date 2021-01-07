@@ -4,6 +4,7 @@ import net.minestom.server.entity.Player;
 import net.minestom.server.event.CancellableEvent;
 import net.minestom.server.event.InventoryEvent;
 import net.minestom.server.inventory.Inventory;
+import net.minestom.server.lock.Acquirable;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
@@ -29,8 +30,8 @@ public class InventoryOpenEvent extends InventoryEvent implements CancellableEve
      * @return the player who opens the inventory
      */
     @NotNull
-    public Player getPlayer() {
-        return player;
+    public Acquirable<Player> getAcquirablePlayer() {
+        return player.getAcquiredElement();
     }
 
     /**

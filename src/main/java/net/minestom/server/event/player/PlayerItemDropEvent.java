@@ -1,26 +1,20 @@
-package net.minestom.server.event.item;
+package net.minestom.server.event.player;
 
 import net.minestom.server.entity.Player;
 import net.minestom.server.event.CancellableEvent;
-import net.minestom.server.event.Event;
+import net.minestom.server.event.PlayerEvent;
 import net.minestom.server.item.ItemStack;
 import org.jetbrains.annotations.NotNull;
 
-public class ItemDropEvent extends Event implements CancellableEvent {
+public class PlayerItemDropEvent extends PlayerEvent implements CancellableEvent {
 
-    private final Player player;
     private final ItemStack itemStack;
 
     private boolean cancelled;
 
-    public ItemDropEvent(@NotNull Player player, @NotNull ItemStack itemStack) {
-        this.player = player;
+    public PlayerItemDropEvent(@NotNull Player player, @NotNull ItemStack itemStack) {
+        super(player);
         this.itemStack = itemStack;
-    }
-
-    @NotNull
-    public Player getPlayer() {
-        return player;
     }
 
     @NotNull

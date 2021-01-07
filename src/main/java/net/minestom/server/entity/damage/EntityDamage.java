@@ -1,6 +1,7 @@
 package net.minestom.server.entity.damage;
 
 import net.minestom.server.entity.Entity;
+import net.minestom.server.lock.Acquirable;
 import org.jetbrains.annotations.NotNull;
 
 /**
@@ -21,7 +22,7 @@ public class EntityDamage extends DamageType {
      * @return the source
      */
     @NotNull
-    public Entity getSource() {
-        return source;
+    public Acquirable<Entity> getSource() {
+        return source.getAcquiredElement();
     }
 }

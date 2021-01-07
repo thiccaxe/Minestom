@@ -6,6 +6,7 @@ import net.minestom.server.chat.ChatColor;
 import net.minestom.server.chat.ColoredText;
 import net.minestom.server.event.player.PlayerLoginEvent;
 import net.minestom.server.instance.Instance;
+import net.minestom.server.lock.Acquirable;
 import net.minestom.server.network.ConnectionManager;
 import net.minestom.server.network.packet.server.play.KeepAlivePacket;
 import net.minestom.server.utils.validate.Check;
@@ -38,7 +39,11 @@ public final class EntityManager {
      */
     public void handleKeepAlive(long tickStart) {
         final KeepAlivePacket keepAlivePacket = new KeepAlivePacket(tickStart);
-        for (Player player : CONNECTION_MANAGER.getUnwrapOnlinePlayers()) {
+
+        // Unsafe loop, shouldn't create any issue
+        for (Acquirable<Player> acquirablePlayer : CONNECTION_MANAGER.getOnlinePlayers()) {
+            final Player player = acquirablePlayer.unsafeUnwrap();
+
             final long lastKeepAlive = tickStart - player.getLastKeepAlive();
             if (lastKeepAlive > KEEP_ALIVE_DELAY && player.didAnswerKeepAlive()) {
                 player.refreshKeepAlive(tickStart);

@@ -5,6 +5,7 @@ import net.minestom.server.event.InventoryEvent;
 import net.minestom.server.inventory.Inventory;
 import net.minestom.server.inventory.click.ClickType;
 import net.minestom.server.item.ItemStack;
+import net.minestom.server.lock.Acquirable;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
@@ -37,8 +38,8 @@ public class InventoryClickEvent extends InventoryEvent {
      * @return the player who clicked in the inventory
      */
     @NotNull
-    public Player getPlayer() {
-        return player;
+    public Acquirable<Player> getAcquirablePlayer() {
+        return player.getAcquiredElement();
     }
 
     /**

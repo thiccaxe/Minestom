@@ -21,6 +21,7 @@ public class PlayerEvent extends Event {
      * Gets the player.
      *
      * @return the player
+     * @deprecated use {@link #getAcquirablePlayer()} instead
      */
     @Deprecated
     @NotNull

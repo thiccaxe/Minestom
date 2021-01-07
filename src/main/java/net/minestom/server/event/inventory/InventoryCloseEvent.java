@@ -3,6 +3,7 @@ package net.minestom.server.event.inventory;
 import net.minestom.server.entity.Player;
 import net.minestom.server.event.InventoryEvent;
 import net.minestom.server.inventory.Inventory;
+import net.minestom.server.lock.Acquirable;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
@@ -25,8 +26,8 @@ public class InventoryCloseEvent extends InventoryEvent {
      * @return the player who closed the inventory
      */
     @NotNull
-    public Player getPlayer() {
-        return player;
+    public Acquirable<Player> getAcquirablePlayer() {
+        return player.getAcquiredElement();
     }
 
     /**

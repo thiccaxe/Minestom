@@ -24,6 +24,8 @@ import net.minestom.server.instance.block.rule.BlockPlacementRule;
 import net.minestom.server.item.Enchantment;
 import net.minestom.server.item.Material;
 import net.minestom.server.listener.manager.PacketListenerManager;
+import net.minestom.server.lock.Acquirable;
+import net.minestom.server.lock.Acquisition;
 import net.minestom.server.network.ConnectionManager;
 import net.minestom.server.network.PacketProcessor;
 import net.minestom.server.network.netty.NettyServer;
@@ -480,9 +482,9 @@ public final class MinecraftServer {
         MinecraftServer.chunkViewDistance = chunkViewDistance;
         if (started) {
 
-            final Collection<Player> players = connectionManager.getUnwrapOnlinePlayers();
+            final Collection<Acquirable<Player>> players = connectionManager.getOnlinePlayers();
 
-            players.forEach(player -> {
+            Acquisition.acquireForEach(players, player -> {
                 final Chunk playerChunk = player.getChunk();
                 if (playerChunk != null) {
 
@@ -516,7 +518,9 @@ public final class MinecraftServer {
                 "The entity view distance must be between 0 and 32");
         MinecraftServer.entityViewDistance = entityViewDistance;
         if (started) {
-            connectionManager.getUnwrapOnlinePlayers().forEach(player -> {
+            final Collection<Acquirable<Player>> players = connectionManager.getOnlinePlayers();
+
+            Acquisition.acquireForEach(players, player -> {
                 final Chunk playerChunk = player.getChunk();
                 if (playerChunk != null) {
                     player.refreshVisibleEntities(playerChunk);

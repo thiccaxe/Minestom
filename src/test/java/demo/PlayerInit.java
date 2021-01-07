@@ -11,7 +11,7 @@ import net.minestom.server.entity.fakeplayer.FakePlayer;
 import net.minestom.server.entity.type.monster.EntityZombie;
 import net.minestom.server.event.GlobalEventHandler;
 import net.minestom.server.event.entity.EntityAttackEvent;
-import net.minestom.server.event.item.ItemDropEvent;
+import net.minestom.server.event.player.PlayerItemDropEvent;
 import net.minestom.server.event.item.PickupItemEvent;
 import net.minestom.server.event.player.*;
 import net.minestom.server.instance.Chunk;
@@ -179,7 +179,7 @@ public class PlayerInit {
             }
         });
 
-        globalEventHandler.addEventCallback(ItemDropEvent.class, event -> {
+        globalEventHandler.addEventCallback(PlayerItemDropEvent.class, event -> {
             final Player player = event.getPlayer();
             ItemStack droppedItem = event.getItemStack();
 

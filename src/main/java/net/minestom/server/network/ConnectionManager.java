@@ -80,17 +80,6 @@ public final class ConnectionManager {
     }
 
     /**
-     * Gets all online players.
-     *
-     * @return an unmodifiable collection containing all the online players
-     * @see #getOnlinePlayers() for a thread-safe access to the collection
-     */
-    @NotNull
-    public Collection<Player> getUnwrapOnlinePlayers() {
-        return unmodifiablePlayers;
-    }
-
-    /**
      * Finds the closest player matching a given username.
      * <p>
      *
@@ -156,7 +145,7 @@ public final class ConnectionManager {
      * @param condition   the condition to receive the message
      */
     public void broadcastMessage(@NotNull JsonMessage jsonMessage, @Nullable PlayerValidator condition) {
-        final Collection<Player> recipients = getRecipients(condition);
+        final Collection<Acquirable<Player>> recipients = getRecipients(condition);
 
         if (!recipients.isEmpty()) {
             final String jsonText = jsonMessage.toString();
@@ -173,25 +162,26 @@ public final class ConnectionManager {
         broadcastMessage(jsonMessage, null);
     }
 
-    private void broadcastJson(@NotNull String json, @NotNull Collection<Player> recipients) {
+    private void broadcastJson(@NotNull String json, @NotNull Collection<Acquirable<Player>> recipients) {
         ChatMessagePacket chatMessagePacket =
                 new ChatMessagePacket(json, ChatMessagePacket.Position.SYSTEM_MESSAGE);
 
-        PacketUtils.sendGroupedPacketUnwrap(recipients, chatMessagePacket);
+        PacketUtils.sendGroupedPacket(recipients, chatMessagePacket);
     }
 
-    private Collection<Player> getRecipients(@Nullable PlayerValidator condition) {
-        Collection<Player> recipients;
+    private Collection<Acquirable<Player>> getRecipients(@Nullable PlayerValidator condition) {
+        Collection<Acquirable<Player>> recipients;
 
         // Get the recipients
         if (condition == null) {
-            recipients = getUnwrapOnlinePlayers();
+            recipients = getOnlinePlayers();
         } else {
             recipients = new ArrayList<>();
-            getUnwrapOnlinePlayers().forEach(player -> {
+            getOnlinePlayers().forEach(acquirablePlayer -> {
+                final Player player = acquirablePlayer.unsafeUnwrap();
                 final boolean result = condition.isValid(player);
                 if (result)
-                    recipients.add(player);
+                    recipients.add(acquirablePlayer);
             });
         }
 
@@ -458,8 +448,8 @@ public final class ConnectionManager {
      */
     public void shutdown() {
         DisconnectPacket disconnectPacket = new DisconnectPacket(getShutdownText());
-        for (Player player : getUnwrapOnlinePlayers()) {
-            final PlayerConnection playerConnection = player.getPlayerConnection();
+        for (Acquirable<Player> player : getOnlinePlayers()) {
+            final PlayerConnection playerConnection = player.unsafeUnwrap().getPlayerConnection();
             if (playerConnection instanceof NettyPlayerConnection) {
                 final NettyPlayerConnection nettyPlayerConnection = (NettyPlayerConnection) playerConnection;
                 final Channel channel = nettyPlayerConnection.getChannel();

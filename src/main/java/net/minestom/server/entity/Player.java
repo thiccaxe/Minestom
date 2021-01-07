@@ -18,8 +18,8 @@ import net.minestom.server.entity.damage.DamageType;
 import net.minestom.server.entity.fakeplayer.FakePlayer;
 import net.minestom.server.entity.vehicle.PlayerVehicleInformation;
 import net.minestom.server.event.inventory.InventoryOpenEvent;
-import net.minestom.server.event.item.ItemDropEvent;
-import net.minestom.server.event.item.ItemUpdateStateEvent;
+import net.minestom.server.event.player.PlayerItemDropEvent;
+import net.minestom.server.event.player.PlayerItemUpdateStateEvent;
 import net.minestom.server.event.item.PickupExperienceEvent;
 import net.minestom.server.event.player.*;
 import net.minestom.server.instance.Chunk;
@@ -411,15 +411,15 @@ public class Player extends LivingEntity implements CommandSender {
                 refreshEating(false);
 
                 triggerStatus((byte) 9); // Mark item use as finished
-                ItemUpdateStateEvent itemUpdateStateEvent = callItemUpdateStateEvent(true);
+                PlayerItemUpdateStateEvent playerItemUpdateStateEvent = callItemUpdateStateEvent(true);
 
-                Check.notNull(itemUpdateStateEvent, "#callItemUpdateStateEvent returned null.");
+                Check.notNull(playerItemUpdateStateEvent, "#callItemUpdateStateEvent returned null.");
 
                 // Refresh hand
-                final boolean isOffHand = itemUpdateStateEvent.getHand() == Player.Hand.OFF;
+                final boolean isOffHand = playerItemUpdateStateEvent.getHand() == Player.Hand.OFF;
                 refreshActiveHand(false, isOffHand, false);
 
-                final ItemStack foodItem = itemUpdateStateEvent.getItemStack();
+                final ItemStack foodItem = playerItemUpdateStateEvent.getItemStack();
                 final boolean isFood = foodItem.getMaterial().isFood();
 
                 if (isFood) {
@@ -1301,7 +1301,7 @@ public class Player extends LivingEntity implements CommandSender {
     }
 
     /**
-     * Calls an {@link ItemDropEvent} with a specified item.
+     * Calls an {@link PlayerItemDropEvent} with a specified item.
      * <p>
      * Returns false if {@code item} is air.
      *
@@ -1313,9 +1313,9 @@ public class Player extends LivingEntity implements CommandSender {
             return false;
         }
 
-        ItemDropEvent itemDropEvent = new ItemDropEvent(this, item);
-        callEvent(ItemDropEvent.class, itemDropEvent);
-        return !itemDropEvent.isCancelled();
+        PlayerItemDropEvent playerItemDropEvent = new PlayerItemDropEvent(this, item);
+        callEvent(PlayerItemDropEvent.class, playerItemDropEvent);
+        return !playerItemDropEvent.isCancelled();
     }
 
     /**
@@ -2263,15 +2263,15 @@ public class Player extends LivingEntity implements CommandSender {
     }
 
     /**
-     * Used to call {@link ItemUpdateStateEvent} with the proper item
+     * Used to call {@link PlayerItemUpdateStateEvent} with the proper item
      * It does check which hand to get the item to update.
      *
      * @param allowFood true if food should be updated, false otherwise
-     * @return the called {@link ItemUpdateStateEvent},
+     * @return the called {@link PlayerItemUpdateStateEvent},
      * null if there is no item to update the state
      */
     @Nullable
-    public ItemUpdateStateEvent callItemUpdateStateEvent(boolean allowFood) {
+    public PlayerItemUpdateStateEvent callItemUpdateStateEvent(boolean allowFood) {
         final Material mainHandMat = getItemInMainHand().getMaterial();
         final Material offHandMat = getItemInOffHand().getMaterial();
         final boolean isOffhand = offHandMat.hasState();
@@ -2287,10 +2287,10 @@ public class Player extends LivingEntity implements CommandSender {
             return null;
 
         final Hand hand = isOffhand ? Hand.OFF : Hand.MAIN;
-        ItemUpdateStateEvent itemUpdateStateEvent = new ItemUpdateStateEvent(this, hand, updatedItem);
-        callEvent(ItemUpdateStateEvent.class, itemUpdateStateEvent);
+        PlayerItemUpdateStateEvent playerItemUpdateStateEvent = new PlayerItemUpdateStateEvent(this, hand, updatedItem);
+        callEvent(PlayerItemUpdateStateEvent.class, playerItemUpdateStateEvent);
 
-        return itemUpdateStateEvent;
+        return playerItemUpdateStateEvent;
     }
 
     /**
