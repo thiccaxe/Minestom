@@ -969,15 +969,15 @@ public abstract class Instance implements BlockModifier, Tickable, LockedElement
             Set<Entity> entities = getEntitiesInChunk(chunkIndex);
             entities.remove(entity);
 
-            this.entities.remove(entity);
+            this.entities.remove(entity.getAcquiredElement());
             if (entity instanceof Player) {
-                this.players.remove(entity);
+                this.players.remove(entity.getAcquiredElement());
             } else if (entity instanceof EntityCreature) {
-                this.creatures.remove(entity);
+                this.creatures.remove(entity.getAcquiredElement());
             } else if (entity instanceof ObjectEntity) {
-                this.objectEntities.remove(entity);
+                this.objectEntities.remove(entity.getAcquiredElement());
             } else if (entity instanceof ExperienceOrb) {
-                this.experienceOrbs.remove(entity);
+                this.experienceOrbs.remove(entity.getAcquiredElement());
             }
         }
     }

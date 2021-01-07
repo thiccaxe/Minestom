@@ -29,10 +29,11 @@ public interface Viewable {
      */
     boolean removeViewer(@NotNull Player player);
 
+    /**
+     * Removes all viewers.
+     */
     default void removeViewers() {
-        getViewers().forEach(acquirablePlayer -> {
-            removeViewer(acquirablePlayer.unsafeUnwrap());
-        });
+        getViewers().forEach(acquirablePlayer -> removeViewer(acquirablePlayer.unsafeUnwrap()));
     }
 
     /**
