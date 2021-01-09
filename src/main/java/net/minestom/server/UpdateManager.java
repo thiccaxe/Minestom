@@ -9,7 +9,6 @@ import net.minestom.server.lock.Acquisition;
 import net.minestom.server.thread.PerChunkThreadProvider;
 import net.minestom.server.thread.ThreadProvider;
 import net.minestom.server.utils.MathUtils;
-import net.minestom.server.utils.validate.Check;
 import org.jetbrains.annotations.NotNull;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -72,34 +71,34 @@ public final class UpdateManager {
                     return;
                 }
 
-            long currentTime = System.nanoTime();
-            final long tickStart = System.currentTimeMillis();
+                long currentTime = System.nanoTime();
+                final long tickStart = System.currentTimeMillis();
 
-            // Tick start callbacks
-            doTickCallback(tickStartCallbacks, tickStart);
+                // Tick start callbacks
+                doTickCallback(tickStartCallbacks, tickStart);
 
-            // Waiting players update (newly connected clients waiting to get into the server)
-            entityManager.updateWaitingPlayers();
+                // Waiting players update (newly connected clients waiting to get into the server)
+                entityManager.updateWaitingPlayers();
 
-            // Keep Alive Handling
-            entityManager.handleKeepAlive(tickStart);
+                // Keep Alive Handling
+                entityManager.handleKeepAlive(tickStart);
 
-            // Server tick (chunks/entities)
-            serverTick(tickStart);
+                // Server tick (chunks/entities)
+                serverTick(tickStart);
 
-            // the time that the tick took in nanoseconds
-            final long tickTime = System.nanoTime() - currentTime;
+                // the time that the tick took in nanoseconds
+                final long tickTime = System.nanoTime() - currentTime;
 
-            // Tick end callbacks
-            doTickCallback(tickEndCallbacks, tickTime / 1000000L);
+                // Tick end callbacks
+                doTickCallback(tickEndCallbacks, tickTime / 1000000L);
 
-            //System.out.println("tick " + tickTime / 1e6D);
+                //System.out.println("tick " + tickTime / 1e6D);
 
-            if (MinecraftServer.hasWaitMonitoring()) {
-                final double waitingTime = MathUtils.round(Acquisition.getCurrentWaitMonitoring() / 1e6D, 2);
-                LOGGER.info("Tick waiting time has been " + waitingTime + "ms");
-                Acquisition.resetWaitMonitoring();
-            }
+                if (MinecraftServer.hasWaitMonitoring()) {
+                    final double waitingTime = MathUtils.round(Acquisition.getCurrentWaitMonitoring() / 1e6D, 2);
+                    LOGGER.info("Tick waiting time has been " + waitingTime + "ms");
+                    Acquisition.resetWaitMonitoring();
+                }
 
             } catch (Exception e) {
                 e.printStackTrace();
@@ -135,7 +134,7 @@ public final class UpdateManager {
      * @param callbacks the callbacks to execute
      * @param value     the value to give to the consumers
      */
-    private void doTickCallback(Queue<LongConsumer> callbacks, long value) {
+    private void doTickCallback(@NotNull Queue<LongConsumer> callbacks, long value) {
         if (!callbacks.isEmpty()) {
             LongConsumer callback;
             while ((callback = callbacks.poll()) != null) {
@@ -149,6 +148,7 @@ public final class UpdateManager {
      *
      * @return the current thread provider
      */
+    @NotNull
     public ThreadProvider getThreadProvider() {
         return threadProvider;
     }
@@ -157,10 +157,12 @@ public final class UpdateManager {
      * Changes the server {@link ThreadProvider}.
      *
      * @param threadProvider the new thread provider
-     * @throws NullPointerException if <code>threadProvider</code> is null
      */
-    public synchronized void setThreadProvider(ThreadProvider threadProvider) {
-        Check.notNull(threadProvider, "The thread provider cannot be null");
+    public synchronized void setThreadProvider(@NotNull ThreadProvider threadProvider) {
+        if (this.threadProvider != null) {
+            // Shutdown the previous thread provider if any
+            this.threadProvider.shutdown();
+        }
         this.threadProvider = threadProvider;
     }
 
@@ -171,7 +173,7 @@ public final class UpdateManager {
      *
      * @param instance the instance
      */
-    public synchronized void signalInstanceCreate(Instance instance) {
+    public synchronized void signalInstanceCreate(@NotNull Instance instance) {
         if (this.threadProvider == null)
             return;
         this.threadProvider.onInstanceCreate(instance);
@@ -184,7 +186,7 @@ public final class UpdateManager {
      *
      * @param instance the instance
      */
-    public synchronized void signalInstanceDelete(Instance instance) {
+    public synchronized void signalInstanceDelete(@NotNull Instance instance) {
         if (this.threadProvider == null)
             return;
         this.threadProvider.onInstanceDelete(instance);
@@ -199,7 +201,7 @@ public final class UpdateManager {
      * @param chunkX   the chunk X
      * @param chunkZ   the chunk Z
      */
-    public synchronized void signalChunkLoad(Instance instance, int chunkX, int chunkZ) {
+    public synchronized void signalChunkLoad(@NotNull Instance instance, int chunkX, int chunkZ) {
         if (this.threadProvider == null)
             return;
         this.threadProvider.onChunkLoad(instance, chunkX, chunkZ);
@@ -214,7 +216,7 @@ public final class UpdateManager {
      * @param chunkX   the chunk X
      * @param chunkZ   the chunk Z
      */
-    public synchronized void signalChunkUnload(Instance instance, int chunkX, int chunkZ) {
+    public synchronized void signalChunkUnload(@NotNull Instance instance, int chunkX, int chunkZ) {
         if (this.threadProvider == null)
             return;
         this.threadProvider.onChunkUnload(instance, chunkX, chunkZ);

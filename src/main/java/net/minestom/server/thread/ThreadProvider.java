@@ -18,7 +18,7 @@ import java.util.function.Consumer;
  */
 public abstract class ThreadProvider {
 
-    private Set<BatchThread> threads;
+    private final Set<BatchThread> threads;
 
     public ThreadProvider(int threadCount) {
         this.threads = new HashSet<>(threadCount);
@@ -93,6 +93,10 @@ public abstract class ThreadProvider {
             runnable.startTick(countDownLatch);
         }
         return countDownLatch;
+    }
+
+    public void shutdown() {
+        this.threads.forEach(BatchThread::shutdown);
     }
 
 }
