@@ -20,6 +20,12 @@ import java.util.function.Consumer;
  */
 public interface Acquirable<T> {
 
+    /**
+     * Blocks the current thread until 'this' can be acquired,
+     * and execute {@code consumer} as a callback with the acquired object.
+     *
+     * @param consumer the consumer of the acquired object
+     */
     default void acquire(@NotNull Consumer<T> consumer) {
         final Thread currentThread = Thread.currentThread();
         Acquisition.AcquisitionData data = new Acquisition.AcquisitionData();
@@ -38,6 +44,17 @@ public interface Acquirable<T> {
                 phaser.arriveAndDeregister();
             }
         }
+    }
+
+    /**
+     * Signals the acquisition manager to acquire 'this' at the end of the thread tick.
+     * <p>
+     * Thread-safety is guaranteed but not the order.
+     *
+     * @param consumer the consumer of the acquired object
+     */
+    default void scheduledAcquire(@NotNull Consumer<T> consumer) {
+        Acquisition.scheduledAcquireRequest(this, consumer);
     }
 
     @NotNull

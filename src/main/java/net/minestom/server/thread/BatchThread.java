@@ -80,7 +80,7 @@ public class BatchThread extends Thread {
 
                     // Execute waiting acquisition
                     {
-                        Acquisition.processQueue(batchThread.getQueue());
+                        Acquisition.processThreadTick(batchThread.getQueue());
                     }
 
                     this.countDownLatch.countDown();

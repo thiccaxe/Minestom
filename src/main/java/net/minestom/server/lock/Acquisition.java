@@ -21,9 +21,12 @@ public final class Acquisition {
     private static final ScheduledExecutorService ACQUISITION_CONTENTION_SERVICE = Executors.newSingleThreadScheduledExecutor();
     private static final ThreadLocal<List<Thread>> ACQUIRED_THREADS = ThreadLocal.withInitial(ArrayList::new);
 
+    private static final ThreadLocal<ScheduledAcquisition> SCHEDULED_ACQUISITION = ThreadLocal.withInitial(ScheduledAcquisition::new);
+
     private static final AtomicLong WAIT_COUNTER_NANO = new AtomicLong();
 
     static {
+        // The goal of the contention service it is manage the situation where two threads are waiting for each other
         ACQUISITION_CONTENTION_SERVICE.scheduleAtFixedRate(() -> {
 
             final Set<BatchThread> threads = MinecraftServer.getUpdateManager().getThreadProvider().getThreads();
@@ -39,9 +42,9 @@ public final class Acquisition {
         }, 3, 3, TimeUnit.MILLISECONDS);
     }
 
-    public static <E, T extends Acquirable<E>> void acquireCollection(Collection<T> collection,
-                                                                      Supplier<Collection<E>> collectionSupplier,
-                                                                      Consumer<Collection<E>> consumer) {
+    public static <E, T extends Acquirable<E>> void acquireCollection(@NotNull Collection<T> collection,
+                                                                      @NotNull Supplier<Collection<E>> collectionSupplier,
+                                                                      @NotNull Consumer<Collection<E>> consumer) {
         final Thread currentThread = Thread.currentThread();
         Collection<E> result = collectionSupplier.get();
 
@@ -79,7 +82,6 @@ public final class Acquisition {
 
     public static <E, T extends Acquirable<E>> void acquireForEach(@NotNull Collection<T> collection,
                                                                    @NotNull Consumer<E> consumer) {
-
         final Thread currentThread = Thread.currentThread();
         Map<BatchThread, List<E>> threadCacheMap = retrieveThreadMap(collection, currentThread, consumer);
 
@@ -136,6 +138,26 @@ public final class Acquisition {
         }
 
         phaser.arriveAndAwaitAdvance();
+    }
+
+    public synchronized static void processThreadTick(@NotNull BatchQueue queue) {
+        processQueue(queue);
+
+        ScheduledAcquisition scheduledAcquisition = SCHEDULED_ACQUISITION.get();
+
+        final List<Acquirable<Object>> acquirableElements = scheduledAcquisition.acquirableElements;
+        final Map<Object, List<Consumer<Object>>> callbacks = scheduledAcquisition.callbacks;
+
+        acquireForEach(acquirableElements, element -> {
+            List<Consumer<Object>> consumers = callbacks.get(element);
+            if (consumers == null || consumers.isEmpty())
+                return;
+            consumers.forEach(objectConsumer -> objectConsumer.accept(element));
+        });
+
+        // Clear collections..
+        acquirableElements.clear();
+        callbacks.clear();
     }
 
     /**
@@ -207,6 +229,14 @@ public final class Acquisition {
         }
     }
 
+    protected synchronized static <T> void scheduledAcquireRequest(@NotNull Acquirable<T> acquirable, Consumer<T> consumer) {
+        ScheduledAcquisition scheduledAcquisition = SCHEDULED_ACQUISITION.get();
+        scheduledAcquisition.acquirableElements.add((Acquirable<Object>) acquirable);
+        scheduledAcquisition.callbacks
+                .computeIfAbsent(acquirable.unsafeUnwrap(), objectAcquirable -> new ArrayList<>())
+                .add((Consumer<Object>) consumer);
+    }
+
     private static <E, T extends Acquirable<E>> Map<BatchThread, List<E>> retrieveThreadMap(@NotNull Collection<T> collection,
                                                                                             @NotNull Thread currentThread,
                                                                                             @NotNull Consumer<E> consumer) {
@@ -246,4 +276,8 @@ public final class Acquisition {
         }
     }
 
+    private static class ScheduledAcquisition {
+        private final List<Acquirable<Object>> acquirableElements = new ArrayList<>();
+        private final Map<Object, List<Consumer<Object>>> callbacks = new HashMap<>();
+    }
 }
