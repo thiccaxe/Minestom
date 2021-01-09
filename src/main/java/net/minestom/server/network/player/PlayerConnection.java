@@ -13,6 +13,7 @@ import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
 import java.net.SocketAddress;
+import java.util.Collections;
 import java.util.concurrent.atomic.AtomicInteger;
 
 /**
@@ -93,7 +94,8 @@ public abstract class PlayerConnection {
 
     protected boolean shouldSendPacket(@NotNull ServerPacket serverPacket) {
         return player == null ||
-                PACKET_LISTENER_MANAGER.processServerPacket(serverPacket, player);
+                PACKET_LISTENER_MANAGER.processServerPacket(serverPacket,
+                        Collections.singleton(player.getAcquiredElement()));
     }
 
     /**

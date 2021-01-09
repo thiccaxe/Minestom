@@ -47,6 +47,10 @@ public final class PacketUtils {
         if (players.isEmpty())
             return;
 
+        final boolean success = PACKET_LISTENER_MANAGER.processServerPacket(packet, players);
+        if (!success)
+            return;
+
         final ByteBuf finalBuffer = createFramedPacket(packet, false);
         final FramedPacket framedPacket = new FramedPacket(finalBuffer);
 
@@ -64,15 +68,12 @@ public final class PacketUtils {
     private static void sendPacket(@NotNull ServerPacket packet,
                                    @NotNull FramedPacket framedPacket,
                                    @NotNull Player player, @Nullable PlayerValidator playerValidator) {
-        final boolean success = PACKET_LISTENER_MANAGER.processServerPacket(packet, player);
-        if (!success)
-            return;
-
-        final boolean hasGroupedPacket = MinecraftServer.hasGroupedPacket();
 
         // Verify if the player should receive the packet
         if (playerValidator != null && !playerValidator.isValid(player))
             return;
+
+        final boolean hasGroupedPacket = MinecraftServer.hasGroupedPacket();
 
         final PlayerConnection playerConnection = player.getPlayerConnection();
         if (hasGroupedPacket && playerConnection instanceof NettyPlayerConnection) {
