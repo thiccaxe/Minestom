@@ -8,6 +8,7 @@ import net.minestom.server.command.builder.arguments.minecraft.ArgumentEntity;
 import net.minestom.server.entity.Entity;
 import net.minestom.server.entity.Player;
 import net.minestom.server.instance.Instance;
+import net.minestom.server.lock.Acquirable;
 
 import java.util.List;
 
@@ -28,7 +29,8 @@ public class EntitySelectorCommand extends Command {
 
     private void executor(CommandSender commandSender, Arguments arguments) {
         Instance instance = commandSender.asPlayer().getInstance();
-        List<Entity> entities = arguments.getEntities("entities").find(instance, null);
-        System.out.println("test " + ((Player) entities.get(0)).getUsername());
+        List<Acquirable<? extends Entity>> entities = arguments.getEntities("entities").find(instance, null);
+        Acquirable<Entity> entity = (Acquirable<Entity>) entities.get(0);
+        System.out.println("test " + ((Player) entity.unsafeUnwrap()).getUsername());
     }
 }

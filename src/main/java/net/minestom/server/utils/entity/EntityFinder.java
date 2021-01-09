@@ -6,6 +6,7 @@ import net.minestom.server.entity.EntityType;
 import net.minestom.server.entity.GameMode;
 import net.minestom.server.entity.Player;
 import net.minestom.server.instance.Instance;
+import net.minestom.server.lock.Acquirable;
 import net.minestom.server.utils.MathUtils;
 import net.minestom.server.utils.Position;
 import net.minestom.server.utils.math.IntRange;
@@ -100,8 +101,8 @@ public class EntityFinder {
      * @return all entities validating the conditions, can be empty
      */
     @NotNull
-    public List<Entity> find(@NotNull Instance instance, @Nullable Entity self) {
-        List<Entity> result = findTarget(instance, targetSelector, startPosition, self);
+    public List<Acquirable<? extends Entity>> find(@NotNull Instance instance, @Nullable Entity self) {
+        List<Acquirable<? extends Entity>> result = findTarget(instance, targetSelector, startPosition, self);
 
         // Fast exist if there is nothing to process
         if (result.isEmpty())
@@ -111,7 +112,8 @@ public class EntityFinder {
         if (distance != null) {
             final int minDistance = distance.getMinimum();
             final int maxDistance = distance.getMaximum();
-            result = result.stream().filter(entity -> {
+            result = result.stream().filter(acquirableEntity -> {
+                final Entity entity = acquirableEntity.unsafeUnwrap();
                 final int distance = (int) entity.getDistance(self);
                 return MathUtils.isBetween(distance, minDistance, maxDistance);
             }).collect(Collectors.toList());
@@ -119,7 +121,8 @@ public class EntityFinder {
 
         // Diff X/Y/Z
         if (dx != null || dy != null || dz != null) {
-            result = result.stream().filter(entity -> {
+            result = result.stream().filter(acquirableEntity -> {
+                final Entity entity = acquirableEntity.unsafeUnwrap();
                 final Position entityPosition = entity.getPosition();
                 if (dx != null && !MathUtils.isBetweenUnordered(
                         entityPosition.getX(),
@@ -142,18 +145,19 @@ public class EntityFinder {
 
         // Entity type
         if (!entityTypes.isEmpty()) {
-            result = result.stream().filter(entity ->
-                    filterToggleableMap(entity, entity.getEntityType(), entityTypes))
-                    .collect(Collectors.toList());
+            result = result.stream().filter(acquirableEntity -> {
+                final Entity entity = acquirableEntity.unsafeUnwrap();
+                return filterToggleableMap(entity.getEntityType(), entityTypes);
+            }).collect(Collectors.toList());
         }
 
         // GameMode
         if (!gameModes.isEmpty()) {
-            final GameMode requirement = gameModes.requirement;
-            result = result.stream().filter(entity -> {
+            result = result.stream().filter(acquirableEntity -> {
+                final Entity entity = acquirableEntity.unsafeUnwrap();
                 if (!(entity instanceof Player))
                     return false;
-                return filterToggleableMap(entity, ((Player) entity).getGameMode(), gameModes);
+                return filterToggleableMap(((Player) entity).getGameMode(), gameModes);
             }).collect(Collectors.toList());
         }
 
@@ -161,7 +165,8 @@ public class EntityFinder {
         if (level != null) {
             final int minLevel = level.getMinimum();
             final int maxLevel = level.getMaximum();
-            result = result.stream().filter(entity -> {
+            result = result.stream().filter(acquirableEntity -> {
+                final Entity entity = acquirableEntity.unsafeUnwrap();
                 if (!(entity instanceof Player))
                     return false;
 
@@ -173,10 +178,11 @@ public class EntityFinder {
         // Name
         if (!names.isEmpty()) {
             // TODO entity name
-            result = result.stream().filter(entity -> {
+            result = result.stream().filter(acquirableEntity -> {
+                final Entity entity = acquirableEntity.unsafeUnwrap();
                 if (!(entity instanceof Player))
                     return false;
-                return filterToggleableMap(entity, ((Player) entity).getUsername(), names);
+                return filterToggleableMap(((Player) entity).getUsername(), names);
             }).collect(Collectors.toList());
         }
 
@@ -191,12 +197,12 @@ public class EntityFinder {
                                 // RANDOM is handled below
                                 return 1;
                             case FURTHEST:
-                                return startPosition.getDistance(ent1.getPosition()) >
-                                        startPosition.getDistance(ent2.getPosition()) ?
+                                return startPosition.getDistance(ent1.unsafeUnwrap().getPosition()) >
+                                        startPosition.getDistance(ent2.unsafeUnwrap().getPosition()) ?
                                         1 : 0;
                             case NEAREST:
-                                return startPosition.getDistance(ent1.getPosition()) <
-                                        startPosition.getDistance(ent2.getPosition()) ?
+                                return startPosition.getDistance(ent1.unsafeUnwrap().getPosition()) <
+                                        startPosition.getDistance(ent2.unsafeUnwrap().getPosition()) ?
                                         1 : 0;
                         }
                         return 1;
@@ -243,16 +249,16 @@ public class EntityFinder {
     }
 
     @NotNull
-    private static List<Entity> findTarget(@NotNull Instance instance, @NotNull TargetSelector targetSelector,
-                                           @NotNull Position startPosition, @Nullable Entity self) {
+    private static List<Acquirable<? extends Entity>> findTarget(@NotNull Instance instance, @NotNull TargetSelector targetSelector,
+                                                                 @NotNull Position startPosition, @Nullable Entity self) {
 
         if (targetSelector == TargetSelector.NEAREST_PLAYER) {
-            Entity entity = null;
+            Acquirable<Player> entity = null;
             float closestDistance = Float.MAX_VALUE;
 
-            Set<Player> instancePlayers = instance.getPlayers();
-            for (Player player : instancePlayers) {
-                final float distance = player.getPosition().getDistance(startPosition);
+            Set<Acquirable<Player>> instancePlayers = instance.getPlayers();
+            for (Acquirable<Player> player : instancePlayers) {
+                final float distance = player.unsafeUnwrap().getPosition().getDistance(startPosition);
                 if (distance < closestDistance) {
                     entity = player;
                     closestDistance = distance;
@@ -260,24 +266,21 @@ public class EntityFinder {
             }
             return Arrays.asList(entity);
         } else if (targetSelector == TargetSelector.RANDOM_PLAYER) {
-            Set<Player> instancePlayers = instance.getPlayers();
+            Set<Acquirable<Player>> instancePlayers = instance.getPlayers();
             final int index = ThreadLocalRandom.current().nextInt(instancePlayers.size());
-            final Player player = instancePlayers.stream().skip(index).findFirst().orElseThrow();
-            return Arrays.asList(player);
+            final Acquirable<Player> acquirablePlayer = instancePlayers.stream().skip(index).findFirst().orElseThrow();
+            return Arrays.asList(acquirablePlayer);
         } else if (targetSelector == TargetSelector.ALL_PLAYERS) {
             return new ArrayList<>(instance.getPlayers());
         } else if (targetSelector == TargetSelector.ALL_ENTITIES) {
             return new ArrayList<>(instance.getEntities());
         } else if (targetSelector == TargetSelector.SELF) {
-            return Arrays.asList(self);
+            return Arrays.asList(self.getAcquiredElement());
         }
         throw new IllegalStateException("Weird thing happened");
     }
 
-    private static <T> boolean filterToggleableMap(@NotNull Entity entity, @NotNull T value, @NotNull ToggleableMap<T> map) {
-        if (!(entity instanceof Player))
-            return false;
-
+    private static <T> boolean filterToggleableMap(@NotNull T value, @NotNull ToggleableMap<T> map) {
         final T requirement = map.requirement;
         // true if the entity type has not been mentioned or if is accepted
         return (!map.containsKey(value) && requirement == null) ||
