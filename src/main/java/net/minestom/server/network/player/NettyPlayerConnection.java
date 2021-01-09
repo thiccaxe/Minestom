@@ -151,18 +151,18 @@ public class NettyPlayerConnection extends PlayerConnection {
     }
 
     @NotNull
-    public ChannelFuture write(@NotNull Object message) {
-        ChannelFuture channelFuture = channel.write(message);
+    public void write(@NotNull Object message) {
+        this.channel.eventLoop().submit(() -> {
+            ChannelFuture channelFuture = channel.write(message);
 
-        if (MinecraftServer.shouldProcessNettyErrors()) {
-            return channelFuture.addListener(future -> {
-                if (!future.isSuccess()) {
-                    future.cause().printStackTrace();
-                }
-            });
-        } else {
-            return channelFuture;
-        }
+            if (MinecraftServer.shouldProcessNettyErrors()) {
+                channelFuture.addListener(future -> {
+                    if (!future.isSuccess()) {
+                        future.cause().printStackTrace();
+                    }
+                });
+            }
+        });
     }
 
     @NotNull

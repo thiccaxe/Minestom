@@ -58,6 +58,8 @@ public class BatchThread extends Thread {
 
         private final Queue<Runnable> queue = new ArrayDeque<>();
 
+        private final Object tickLock = new Object();
+
         @Override
         public void run() {
             Check.notNull(batchThread, "The linked BatchThread cannot be null!");
@@ -67,7 +69,7 @@ public class BatchThread extends Thread {
                 if (countDownLatch == null)
                     continue;
 
-                synchronized (this) {
+                synchronized (tickLock) {
                     this.inTick = true;
 
                     // Execute all pending runnable
@@ -90,7 +92,7 @@ public class BatchThread extends Thread {
 
                     // Wait for the next notify (game tick)
                     try {
-                        wait();
+                        this.tickLock.wait();
                     } catch (InterruptedException e) {
                         e.printStackTrace();
                     }
@@ -99,8 +101,10 @@ public class BatchThread extends Thread {
         }
 
         public synchronized void startTick(@NotNull CountDownLatch countDownLatch) {
-            this.countDownLatch = countDownLatch;
-            this.notifyAll();
+            synchronized (tickLock){
+                this.countDownLatch = countDownLatch;
+                this.tickLock.notifyAll();
+            }
         }
 
         public boolean isInTick() {

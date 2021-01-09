@@ -36,6 +36,7 @@ import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
 import java.util.*;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReadWriteLock;
@@ -58,7 +59,7 @@ public class InstanceContainer extends Instance {
     // the chunk generator used, can be null
     private ChunkGenerator chunkGenerator;
     // (chunk index -> chunk) map, contains all the chunks in the instance
-    private final Long2ObjectMap<Chunk> chunks = Long2ObjectMaps.synchronize(new Long2ObjectOpenHashMap<>());
+    private final Map<Long, Chunk> chunks = new ConcurrentHashMap<>();
     // contains all the chunks to remove during the next instance tick, should be synchronized
     protected final Set<Chunk> scheduledChunksToRemove = new HashSet<>();
 

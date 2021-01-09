@@ -93,7 +93,7 @@ public abstract class Instance implements BlockModifier, Tickable, LockedElement
     protected final Set<Acquirable<ObjectEntity>> objectEntities = new CopyOnWriteArraySet<>();
     protected final Set<Acquirable<ExperienceOrb>> experienceOrbs = new CopyOnWriteArraySet<>();
     // Entities per chunk
-    protected final Long2ObjectMap<Set<Entity>> chunkEntities = Long2ObjectMaps.synchronize(new Long2ObjectOpenHashMap<>());
+    protected final Map<Long, Set<Entity>> chunkEntities = new ConcurrentHashMap<>();
     private final Object entitiesLock = new Object(); // Lock used to prevent the entities Set and Map to be subject to race condition
 
     // the uuid of this instance
