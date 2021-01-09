@@ -6,19 +6,18 @@ import net.minestom.server.entity.EntityManager;
 import net.minestom.server.instance.Instance;
 import net.minestom.server.instance.InstanceManager;
 import net.minestom.server.lock.Acquisition;
+import net.minestom.server.monitoring.TickMonitor;
 import net.minestom.server.thread.PerChunkThreadProvider;
 import net.minestom.server.thread.ThreadProvider;
-import net.minestom.server.utils.MathUtils;
 import org.jetbrains.annotations.NotNull;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.util.List;
 import java.util.Queue;
-import java.util.concurrent.CountDownLatch;
-import java.util.concurrent.Executors;
-import java.util.concurrent.ScheduledExecutorService;
-import java.util.concurrent.TimeUnit;
-import java.util.function.LongConsumer;
+import java.util.concurrent.*;
+import java.util.function.Consumer;
+import java.util.function.DoubleConsumer;
 
 /**
  * Manager responsible for the server ticks.
@@ -38,8 +37,9 @@ public final class UpdateManager {
 
     private ThreadProvider threadProvider;
 
-    private final Queue<LongConsumer> tickStartCallbacks = Queues.newConcurrentLinkedQueue();
-    private final Queue<LongConsumer> tickEndCallbacks = Queues.newConcurrentLinkedQueue();
+    private final Queue<DoubleConsumer> tickStartCallbacks = Queues.newConcurrentLinkedQueue();
+    private final Queue<DoubleConsumer> tickEndCallbacks = Queues.newConcurrentLinkedQueue();
+    private final List<Consumer<TickMonitor>> tickMonitors = new CopyOnWriteArrayList<>();
 
     {
         // DEFAULT THREAD PROVIDER
@@ -88,15 +88,18 @@ public final class UpdateManager {
 
                 // the time that the tick took in nanoseconds
                 final long tickTime = System.nanoTime() - currentTime;
+                final double tickTimeMs = tickTime / 1e6D;
 
                 // Tick end callbacks
-                doTickCallback(tickEndCallbacks, tickTime / 1000000L);
+                doTickCallback(tickEndCallbacks, tickTimeMs);
 
-                //System.out.println("tick " + tickTime / 1e6D);
+                // Monitoring
+                if (!tickMonitors.isEmpty()) {
+                    final double acquisitionTimeMs = Acquisition.getCurrentWaitMonitoring() / 1e6D;
+                    final TickMonitor tickMonitor = new TickMonitor(tickTimeMs, acquisitionTimeMs);
 
-                if (MinecraftServer.hasWaitMonitoring()) {
-                    final double waitingTime = MathUtils.round(Acquisition.getCurrentWaitMonitoring() / 1e6D, 2);
-                    LOGGER.info("Tick waiting time has been " + waitingTime + "ms");
+                    this.tickMonitors.forEach(consumer -> consumer.accept(tickMonitor));
+
                     Acquisition.resetWaitMonitoring();
                 }
 
@@ -134,9 +137,9 @@ public final class UpdateManager {
      * @param callbacks the callbacks to execute
      * @param value     the value to give to the consumers
      */
-    private void doTickCallback(@NotNull Queue<LongConsumer> callbacks, long value) {
+    private void doTickCallback(@NotNull Queue<DoubleConsumer> callbacks, double value) {
         if (!callbacks.isEmpty()) {
-            LongConsumer callback;
+            DoubleConsumer callback;
             while ((callback = callbacks.poll()) != null) {
                 callback.accept(value);
             }
@@ -229,7 +232,7 @@ public final class UpdateManager {
      *
      * @param callback the tick start callback
      */
-    public void addTickStartCallback(@NotNull LongConsumer callback) {
+    public void addTickStartCallback(@NotNull DoubleConsumer callback) {
         this.tickStartCallbacks.add(callback);
     }
 
@@ -238,7 +241,7 @@ public final class UpdateManager {
      *
      * @param callback the callback to remove
      */
-    public void removeTickStartCallback(@NotNull LongConsumer callback) {
+    public void removeTickStartCallback(@NotNull DoubleConsumer callback) {
         this.tickStartCallbacks.remove(callback);
     }
 
@@ -249,7 +252,7 @@ public final class UpdateManager {
      *
      * @param callback the tick end callback
      */
-    public void addTickEndCallback(@NotNull LongConsumer callback) {
+    public void addTickEndCallback(@NotNull DoubleConsumer callback) {
         this.tickEndCallbacks.add(callback);
     }
 
@@ -258,8 +261,12 @@ public final class UpdateManager {
      *
      * @param callback the callback to remove
      */
-    public void removeTickEndCallback(@NotNull LongConsumer callback) {
+    public void removeTickEndCallback(@NotNull DoubleConsumer callback) {
         this.tickEndCallbacks.remove(callback);
+    }
+
+    public void addTickMonitor(@NotNull Consumer<TickMonitor> consumer) {
+        this.tickMonitors.add(consumer);
     }
 
     /**

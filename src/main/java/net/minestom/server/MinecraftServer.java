@@ -1,7 +1,6 @@
 package net.minestom.server;
 
 import net.minestom.server.advancements.AdvancementManager;
-import net.minestom.server.benchmark.BenchmarkManager;
 import net.minestom.server.command.CommandManager;
 import net.minestom.server.data.DataManager;
 import net.minestom.server.data.DataType;
@@ -26,6 +25,7 @@ import net.minestom.server.item.Material;
 import net.minestom.server.listener.manager.PacketListenerManager;
 import net.minestom.server.lock.Acquirable;
 import net.minestom.server.lock.Acquisition;
+import net.minestom.server.monitoring.BenchmarkManager;
 import net.minestom.server.network.ConnectionManager;
 import net.minestom.server.network.PacketProcessor;
 import net.minestom.server.network.netty.NettyServer;
