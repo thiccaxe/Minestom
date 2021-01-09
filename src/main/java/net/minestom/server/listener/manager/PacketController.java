@@ -8,7 +8,7 @@ import java.util.Collection;
 
 /**
  * Used to control the output of a packet in {@link ClientPacketConsumer#accept(Player, PacketController, ClientPlayPacket)}
- * and {@link ServerPacketConsumer#accept(Player, PacketController, ServerPacket)}.
+ * and {@link ServerPacketConsumer#accept(Collection, PacketController, ServerPacket)}.
  */
 public class PacketController {
 
