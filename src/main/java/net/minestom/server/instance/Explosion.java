@@ -81,7 +81,7 @@ public abstract class Explosion {
         postExplosion(instance, blocks, packet);
 
         // TODO send only to close players
-        PacketUtils.sendGroupedPacketUnwrap(instance.getPlayers(), packet);
+        PacketUtils.sendGroupedPacket(instance.getPlayers(), packet);
 
         postSend(instance, blocks);
     }

@@ -1,5 +1,7 @@
 package net.minestom.server.command.builder.arguments;
 
+import net.minestom.server.command.builder.exception.ArgumentSyntaxException;
+import org.apache.commons.lang3.StringUtils;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
@@ -29,7 +31,7 @@ public class ArgumentWord extends Argument<String> {
      * WARNING: having an array too long would result in a packet too big or the client being stuck during login.
      *
      * @param restrictions the accepted words
-     * @return 'this'
+     * @return 'this' for chaining
      */
     @NotNull
     public ArgumentWord from(@Nullable String... restrictions) {
@@ -37,32 +39,22 @@ public class ArgumentWord extends Argument<String> {
         return this;
     }
 
-    @Override
-    public int getCorrectionResult(@NotNull String value) {
-        if (value.contains(" "))
-            return SPACE_ERROR;
-
-        return SUCCESS;
-    }
-
     @NotNull
     @Override
-    public String parse(@NotNull String value) {
-        return value;
-    }
+    public String parse(@NotNull String input) throws ArgumentSyntaxException {
+        if (input.contains(StringUtils.SPACE))
+            throw new ArgumentSyntaxException("Word cannot contain space character", input, SPACE_ERROR);
 
-    @Override
-    public int getConditionResult(@NotNull String value) {
-        // Check restrictions
+        // Check restrictions (acting as literal)
         if (hasRestrictions()) {
             for (String r : restrictions) {
-                if (value.equalsIgnoreCase(r))
-                    return SUCCESS;
+                if (input.equalsIgnoreCase(r))
+                    return input;
             }
-            return RESTRICTION_ERROR;
+            throw new ArgumentSyntaxException("Word needs to be in the restriction list", input, RESTRICTION_ERROR);
         }
 
-        return SUCCESS;
+        return input;
     }
 
     /**

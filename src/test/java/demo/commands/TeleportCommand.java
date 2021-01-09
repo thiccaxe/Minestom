@@ -32,6 +32,7 @@ public class TeleportCommand extends Command {
             Player player = sender.asPlayer();
             player.teleport(acquirableTarget.unsafeUnwrap().getPosition());
         }
+        sender.sendMessage("Teleported to player "+playerName);
     }
 
     private void onPositionTeleport(CommandSender sender, Arguments args) {

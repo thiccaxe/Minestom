@@ -1,7 +1,7 @@
 package net.minestom.server.listener;
 
 import net.minestom.server.entity.Player;
-import net.minestom.server.event.item.ItemUpdateStateEvent;
+import net.minestom.server.event.player.PlayerItemUpdateStateEvent;
 import net.minestom.server.event.player.PlayerStartDiggingEvent;
 import net.minestom.server.event.player.PlayerSwapItemEvent;
 import net.minestom.server.instance.Instance;
@@ -120,13 +120,13 @@ public class PlayerDiggingListener {
                 break;
             case UPDATE_ITEM_STATE:
                 player.refreshEating(false);
-                ItemUpdateStateEvent itemUpdateStateEvent = player.callItemUpdateStateEvent(false);
+                PlayerItemUpdateStateEvent playerItemUpdateStateEvent = player.callItemUpdateStateEvent(false);
 
-                if (itemUpdateStateEvent == null) {
+                if (playerItemUpdateStateEvent == null) {
                     player.refreshActiveHand(true, false, false);
                 } else {
-                    final boolean isOffHand = itemUpdateStateEvent.getHand() == Player.Hand.OFF;
-                    player.refreshActiveHand(itemUpdateStateEvent.hasHandAnimation(), isOffHand, false);
+                    final boolean isOffHand = playerItemUpdateStateEvent.getHand() == Player.Hand.OFF;
+                    player.refreshActiveHand(playerItemUpdateStateEvent.hasHandAnimation(), isOffHand, false);
                 }
 
                 break;

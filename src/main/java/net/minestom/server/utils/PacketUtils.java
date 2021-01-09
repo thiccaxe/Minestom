@@ -17,6 +17,9 @@ import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
 import java.util.Collection;
+import java.util.List;
+import java.util.concurrent.CopyOnWriteArrayList;
+import java.util.concurrent.ThreadLocalRandom;
 import java.util.zip.Deflater;
 
 /**
@@ -27,11 +30,16 @@ public final class PacketUtils {
 
     private static final PacketListenerManager PACKET_LISTENER_MANAGER = MinecraftServer.getPacketListenerManager();
 
-    private final static Deflater deflater = new Deflater(3);
-    private final static byte[] buffer = new byte[8192];
+    private static final int DEFLATER_COUNT = 10;
+    private static final List<Deflater> DEFLATERS = new CopyOnWriteArrayList<>();
+
+    static {
+        for (int i = 0; i < DEFLATER_COUNT; i++) {
+            DEFLATERS.add(new Deflater(3));
+        }
+    }
 
     private PacketUtils() {
-
     }
 
     public static void sendGroupedPacket(@NotNull Collection<Acquirable<Player>> players, @NotNull ServerPacket packet,
@@ -51,39 +59,6 @@ public final class PacketUtils {
 
     public static void sendGroupedPacket(@NotNull Collection<Acquirable<Player>> players, @NotNull ServerPacket packet) {
         sendGroupedPacket(players, packet, null);
-    }
-
-    /**
-     * Sends a {@link ServerPacket} to multiple players.
-     * <p>
-     * Can drastically improve performance since the packet will not have to be processed as much.
-     *
-     * @param players         the players to send the packet to
-     * @param packet          the packet to send to the players
-     * @param playerValidator optional callback to check if a specify player of {@code players} should receive the packet
-     */
-    public static void sendGroupedPacketUnwrap(@NotNull Collection<Player> players, @NotNull ServerPacket packet,
-                                               @Nullable PlayerValidator playerValidator) {
-        if (players.isEmpty())
-            return;
-
-        final ByteBuf finalBuffer = createFramedPacket(packet, false);
-        final FramedPacket framedPacket = new FramedPacket(finalBuffer);
-
-        // Send packet to all players
-        for (Player player : players) {
-            sendPacket(packet, framedPacket, player, playerValidator);
-        }
-    }
-
-    /**
-     * Same as {@link #sendGroupedPacket(Collection, ServerPacket, PlayerValidator)}
-     * but with the player validator sets to null.
-     *
-     * @see #sendGroupedPacket(Collection, ServerPacket, PlayerValidator)
-     */
-    public static void sendGroupedPacketUnwrap(@NotNull Collection<Player> players, @NotNull ServerPacket packet) {
-        sendGroupedPacketUnwrap(players, packet, null);
     }
 
     private static void sendPacket(@NotNull ServerPacket packet,
@@ -205,12 +180,14 @@ public final class PacketUtils {
      * {@code packetBuffer} needs to be the packet content without any header (if you want to use it to write a Minecraft packet).
      *
      * @param deflater          the deflater for zlib compression
-     * @param buffer            a cached buffer which will be used to store temporary the deflater output
+     * @param buffer            a cached buffer which will be used to store temporary the deflater output,
+     *                          null if you prefer the buffer to be allocated dynamically when required
      * @param packetBuffer      the buffer containing all the packet fields
      * @param compressionTarget the buffer which will receive the compressed version of {@code packetBuffer}
      */
-    public static void compressBuffer(@NotNull Deflater deflater, @NotNull byte[] buffer,
-                                      @NotNull ByteBuf packetBuffer, @NotNull ByteBuf compressionTarget) {
+    public static void compressBuffer(@NotNull Deflater deflater, @Nullable byte[] buffer,
+                                      @NotNull ByteBuf packetBuffer, @NotNull ByteBuf compressionTarget,
+                                      boolean synchronization) {
         final int packetLength = packetBuffer.readableBytes();
 
         if (packetLength < MinecraftServer.getCompressionThreshold()) {
@@ -219,15 +196,29 @@ public final class PacketUtils {
         } else {
             Utils.writeVarIntBuf(compressionTarget, packetLength);
 
-            deflater.setInput(packetBuffer.nioBuffer());
-            deflater.finish();
+            final Runnable compressor = () -> {
+                // Allocate buffer if not already
+                byte[] output = buffer != null ? buffer : new byte[8192];
 
-            while (!deflater.finished()) {
-                final int length = deflater.deflate(buffer);
-                compressionTarget.writeBytes(buffer, 0, length);
+                deflater.setInput(packetBuffer.nioBuffer());
+                deflater.finish();
+
+                while (!deflater.finished()) {
+                    final int length = deflater.deflate(output);
+                    compressionTarget.writeBytes(output, 0, length);
+                }
+
+                deflater.reset();
+            };
+
+            // Synchronize only if asked
+            if (synchronization) {
+                synchronized (deflater) {
+                    compressor.run();
+                }
+            } else {
+                compressor.run();
             }
-
-            deflater.reset();
         }
     }
 
@@ -246,12 +237,13 @@ public final class PacketUtils {
         ByteBuf packetBuf = writePacket(serverPacket);
 
         if (MinecraftServer.getCompressionThreshold() > 0) {
-
             ByteBuf compressedBuf = directBuffer ? BufUtils.getBuffer(true) : Unpooled.buffer();
             ByteBuf framedBuf = directBuffer ? BufUtils.getBuffer(true) : Unpooled.buffer();
-            synchronized (deflater) {
-                compressBuffer(deflater, buffer, packetBuf, compressedBuf);
-            }
+
+            // Get a random deflater
+            final Deflater deflater = DEFLATERS.get(ThreadLocalRandom.current().nextInt(DEFLATER_COUNT));
+            compressBuffer(deflater, null, packetBuf, compressedBuf, true);
+
             packetBuf.release();
 
             frameBuffer(compressedBuf, framedBuf);

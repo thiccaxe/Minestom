@@ -22,6 +22,7 @@ import net.minestom.server.network.packet.server.play.DeclareCommandsPacket;
 import net.minestom.server.utils.ArrayUtils;
 import net.minestom.server.utils.callback.CommandCallback;
 import net.minestom.server.utils.validate.Check;
+import org.apache.commons.lang3.StringUtils;
 import org.apache.commons.lang3.tuple.Pair;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
@@ -209,7 +210,7 @@ public final class CommandManager {
                 return true;
             } else {
                 // Check for legacy-command
-                final String[] splitCommand = command.split(" ");
+                final String[] splitCommand = command.split(StringUtils.SPACE);
                 final String commandName = splitCommand[0];
                 final CommandProcessor commandProcessor = commandProcessorMap.get(commandName.toLowerCase());
                 if (commandProcessor == null) {
@@ -220,7 +221,7 @@ public final class CommandManager {
                 }
 
                 // Execute the legacy-command
-                final String[] args = command.substring(command.indexOf(" ") + 1).split(" ");
+                final String[] args = command.substring(command.indexOf(StringUtils.SPACE) + 1).split(StringUtils.SPACE);
 
                 return commandProcessor.process(sender, commandName, args);
             }
@@ -387,9 +388,9 @@ public final class CommandManager {
         nodes.add(literalNode);
 
         // Contains the arguments of the already-parsed syntaxes
-        List<Argument[]> syntaxesArguments = new ArrayList<>();
+        List<Argument<?>[]> syntaxesArguments = new ArrayList<>();
         // Contains the nodes of an argument
-        Map<Argument, List<DeclareCommandsPacket.Node>> storedArgumentsNodes = new HashMap<>();
+        Map<Argument<?>, List<DeclareCommandsPacket.Node>> storedArgumentsNodes = new HashMap<>();
 
         for (CommandSyntax syntax : syntaxes) {
             final CommandCondition commandCondition = syntax.getCommandCondition();
@@ -405,16 +406,17 @@ public final class CommandManager {
             // Represent the children of the last node
             IntList argChildren = null;
 
-            final Argument[] arguments = syntax.getArguments();
+            final Argument<?>[] arguments = syntax.getArguments();
             for (int i = 0; i < arguments.length; i++) {
-                final Argument argument = arguments[i];
+                final Argument<?> argument = arguments[i];
                 final boolean isFirst = i == 0;
                 final boolean isLast = i == arguments.length - 1;
 
+                // Find shared part
                 boolean foundSharedPart = false;
-                for (Argument[] parsedArguments : syntaxesArguments) {
+                for (Argument<?>[] parsedArguments : syntaxesArguments) {
                     if (ArrayUtils.sameStart(arguments, parsedArguments, i + 1)) {
-                        final Argument sharedArgument = parsedArguments[i];
+                        final Argument<?> sharedArgument = parsedArguments[i];
 
                         argChildren = new IntArrayList();
                         lastNodes = storedArgumentsNodes.get(sharedArgument);
@@ -632,16 +634,16 @@ public final class CommandManager {
         } else if (argument instanceof ArgumentFloatRange) {
             DeclareCommandsPacket.Node argumentNode = simpleArgumentNode(nodes, argument, executable, false);
             argumentNode.parser = "minecraft:float_range";
-        } else if (argument instanceof ArgumentEntities) {
-            ArgumentEntities argumentEntities = (ArgumentEntities) argument;
+        } else if (argument instanceof ArgumentEntity) {
+            ArgumentEntity argumentEntity = (ArgumentEntity) argument;
             DeclareCommandsPacket.Node argumentNode = simpleArgumentNode(nodes, argument, executable, false);
             argumentNode.parser = "minecraft:entity";
             argumentNode.properties = packetWriter -> {
                 byte mask = 0;
-                if (argumentEntities.isOnlySingleEntity()) {
+                if (argumentEntity.isOnlySingleEntity()) {
                     mask += 1;
                 }
-                if (argumentEntities.isOnlyPlayers()) {
+                if (argumentEntity.isOnlyPlayers()) {
                     mask += 2;
                 }
                 packetWriter.writeByte(mask);

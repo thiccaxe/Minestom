@@ -7,6 +7,7 @@ import net.minestom.server.chat.ColoredText;
 import net.minestom.server.chat.JsonMessage;
 import net.minestom.server.entity.Player;
 import net.minestom.server.entity.fakeplayer.FakePlayer;
+import net.minestom.server.event.player.AsyncPlayerPreLoginEvent;
 import net.minestom.server.listener.manager.ClientPacketConsumer;
 import net.minestom.server.listener.manager.ServerPacketConsumer;
 import net.minestom.server.lock.Acquirable;
@@ -17,6 +18,7 @@ import net.minestom.server.network.packet.server.play.DisconnectPacket;
 import net.minestom.server.network.player.NettyPlayerConnection;
 import net.minestom.server.network.player.PlayerConnection;
 import net.minestom.server.utils.PacketUtils;
+import net.minestom.server.utils.async.AsyncUtils;
 import net.minestom.server.utils.callback.validator.PlayerValidator;
 import org.apache.commons.lang3.StringUtils;
 import org.jetbrains.annotations.NotNull;
@@ -75,17 +77,6 @@ public final class ConnectionManager {
     @NotNull
     public Collection<Acquirable<Player>> getOnlinePlayers() {
         return unmodifiableAcquirablePlayers;
-    }
-
-    /**
-     * Gets all online players.
-     *
-     * @return an unmodifiable collection containing all the online players
-     * @see #getOnlinePlayers() for a thread-safe access to the collection
-     */
-    @NotNull
-    public Collection<Player> getUnwrapOnlinePlayers() {
-        return unmodifiablePlayers;
     }
 
     /**
@@ -154,7 +145,7 @@ public final class ConnectionManager {
      * @param condition   the condition to receive the message
      */
     public void broadcastMessage(@NotNull JsonMessage jsonMessage, @Nullable PlayerValidator condition) {
-        final Collection<Player> recipients = getRecipients(condition);
+        final Collection<Acquirable<Player>> recipients = getRecipients(condition);
 
         if (!recipients.isEmpty()) {
             final String jsonText = jsonMessage.toString();
@@ -171,25 +162,26 @@ public final class ConnectionManager {
         broadcastMessage(jsonMessage, null);
     }
 
-    private void broadcastJson(@NotNull String json, @NotNull Collection<Player> recipients) {
+    private void broadcastJson(@NotNull String json, @NotNull Collection<Acquirable<Player>> recipients) {
         ChatMessagePacket chatMessagePacket =
                 new ChatMessagePacket(json, ChatMessagePacket.Position.SYSTEM_MESSAGE);
 
-        PacketUtils.sendGroupedPacketUnwrap(recipients, chatMessagePacket);
+        PacketUtils.sendGroupedPacket(recipients, chatMessagePacket);
     }
 
-    private Collection<Player> getRecipients(@Nullable PlayerValidator condition) {
-        Collection<Player> recipients;
+    private Collection<Acquirable<Player>> getRecipients(@Nullable PlayerValidator condition) {
+        Collection<Acquirable<Player>> recipients;
 
         // Get the recipients
         if (condition == null) {
-            recipients = getUnwrapOnlinePlayers();
+            recipients = getOnlinePlayers();
         } else {
             recipients = new ArrayList<>();
-            getUnwrapOnlinePlayers().forEach(player -> {
+            getOnlinePlayers().forEach(acquirablePlayer -> {
+                final Player player = acquirablePlayer.unsafeUnwrap();
                 final boolean result = condition.isValid(player);
                 if (result)
-                    recipients.add(player);
+                    recipients.add(acquirablePlayer);
             });
         }
 
@@ -338,26 +330,10 @@ public final class ConnectionManager {
      *
      * @param player the player to add
      */
-    public synchronized void createPlayer(@NotNull Player player) {
+    public synchronized void registerPlayer(@NotNull Player player) {
         this.acquirablePlayers.add(player.getAcquiredElement());
         this.players.add(player);
         this.connectionPlayerMap.put(player.getPlayerConnection(), player);
-    }
-
-    /**
-     * Creates a {@link Player} object and register it.
-     *
-     * @param uuid       the new player uuid
-     * @param username   the new player username
-     * @param connection the new player connection
-     * @return the newly created player object
-     */
-    @NotNull
-    public Player createPlayer(@NotNull UUID uuid, @NotNull String username, @NotNull PlayerConnection connection) {
-        final Player player = getPlayerProvider().createPlayer(uuid, username, connection);
-        createPlayer(player);
-        MinecraftServer.getEntityManager().addWaitingPlayer(player);
-        return player;
     }
 
     /**
@@ -379,30 +355,101 @@ public final class ConnectionManager {
     }
 
     /**
-     * Sends a {@link LoginSuccessPacket} and change the connection state to {@link ConnectionState#PLAY}.
+     * Calls the player initialization callbacks and the event {@link AsyncPlayerPreLoginEvent}.
+     * <p>
+     * Sends a {@link LoginSuccessPacket} if successful (not kicked)
+     * and change the connection state to {@link ConnectionState#PLAY}.
      *
-     * @param connection the player connection
-     * @param uuid       the uuid of the player
-     * @param username   the username of the player
-     * @return the newly created player object
+     * @param player the player
      */
-    @NotNull
-    public Player startPlayState(@NotNull PlayerConnection connection, @NotNull UUID uuid, @NotNull String username) {
-        LoginSuccessPacket loginSuccessPacket = new LoginSuccessPacket(uuid, username);
-        connection.sendPacket(loginSuccessPacket);
+    public void startPlayState(@NotNull Player player) {
+        // Init player (register events)
+        for (Consumer<Player> playerInitialization : getPlayerInitializations()) {
+            playerInitialization.accept(player);
+        }
 
-        connection.setConnectionState(ConnectionState.PLAY);
-        return createPlayer(uuid, username, connection);
+        AsyncUtils.runAsync(() -> {
+            String username = player.getUsername();
+            UUID uuid = player.getUuid();
+
+            // Call pre login event
+            AsyncPlayerPreLoginEvent asyncPlayerPreLoginEvent = new AsyncPlayerPreLoginEvent(player, username, uuid);
+            player.callEvent(AsyncPlayerPreLoginEvent.class, asyncPlayerPreLoginEvent);
+
+            // Close the player channel if he has been disconnected (kick)
+            final boolean online = player.isOnline();
+            if (!online) {
+                final PlayerConnection playerConnection = player.getPlayerConnection();
+
+                if (playerConnection instanceof NettyPlayerConnection) {
+                    ((NettyPlayerConnection) playerConnection).getChannel().flush();
+                }
+
+                //playerConnection.disconnect();
+                return;
+            }
+
+            // Change UUID/Username based on the event
+            {
+                final String eventUsername = asyncPlayerPreLoginEvent.getUsername();
+                final UUID eventUuid = asyncPlayerPreLoginEvent.getPlayerUuid();
+
+                if (!player.getUsername().equals(eventUsername)) {
+                    player.setUsernameField(eventUsername);
+                    username = eventUsername;
+                }
+
+                if (!player.getUuid().equals(eventUuid)) {
+                    player.setUuid(eventUuid);
+                    uuid = eventUuid;
+                }
+            }
+
+            // Send login success packet
+            {
+                final PlayerConnection connection = player.getPlayerConnection();
+
+                LoginSuccessPacket loginSuccessPacket = new LoginSuccessPacket(uuid, username);
+                connection.sendPacket(loginSuccessPacket);
+
+                connection.setConnectionState(ConnectionState.PLAY);
+            }
+
+            // Add the player to the waiting list
+            MinecraftServer.getEntityManager().addWaitingPlayer(player);
+        });
     }
 
     /**
-     * Shutdowns the connection manager by kicking all the currently connected players
+     * Creates a {@link Player} using the defined {@link PlayerProvider}
+     * and execute {@link #startPlayState(Player)}.
+     *
+     * @param register true to register the newly created player in {@link ConnectionManager} lists
+     * @return the newly created player object
+     * @see #startPlayState(Player)
+     */
+    @NotNull
+    public Player startPlayState(@NotNull PlayerConnection connection,
+                                 @NotNull UUID uuid, @NotNull String username,
+                                 boolean register) {
+        final Player player = getPlayerProvider().createPlayer(uuid, username, connection);
+
+        if (register) {
+            registerPlayer(player);
+        }
+
+        startPlayState(player);
+
+        return player;
+    }
+
+    /**
+     * Shutdowns the connection manager by kicking all the currently connected players.
      */
     public void shutdown() {
-        DisconnectPacket disconnectPacket = new DisconnectPacket();
-        disconnectPacket.message = getShutdownText();
-        for (Player player : getUnwrapOnlinePlayers()) {
-            final PlayerConnection playerConnection = player.getPlayerConnection();
+        DisconnectPacket disconnectPacket = new DisconnectPacket(getShutdownText());
+        for (Acquirable<Player> player : getOnlinePlayers()) {
+            final PlayerConnection playerConnection = player.unsafeUnwrap().getPlayerConnection();
             if (playerConnection instanceof NettyPlayerConnection) {
                 final NettyPlayerConnection nettyPlayerConnection = (NettyPlayerConnection) playerConnection;
                 final Channel channel = nettyPlayerConnection.getChannel();

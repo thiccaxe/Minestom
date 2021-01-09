@@ -39,9 +39,9 @@ public final class Acquisition {
         }, 3, 3, TimeUnit.MILLISECONDS);
     }
 
-    public static <E, T extends Acquirable<E>> void acquire(Collection<T> collection,
-                                                            Supplier<Collection<E>> collectionSupplier,
-                                                            Consumer<Collection<E>> consumer) {
+    public static <E, T extends Acquirable<E>> void acquireCollection(Collection<T> collection,
+                                                                      Supplier<Collection<E>> collectionSupplier,
+                                                                      Consumer<Collection<E>> consumer) {
         final Thread currentThread = Thread.currentThread();
         Collection<E> result = collectionSupplier.get();
 
@@ -111,7 +111,7 @@ public final class Acquisition {
     /**
      * Notifies all the locks and wait for them to return using a {@link Phaser}.
      * <p>
-     * Currently called during entities tick (TODO: chunks & instances)
+     * Currently called during instance/chunk/entity ticks
      * and in {@link BatchThread.BatchRunnable#run()} after every thread-tick.
      *
      * @param queue the queue to empty containing the locks to notify

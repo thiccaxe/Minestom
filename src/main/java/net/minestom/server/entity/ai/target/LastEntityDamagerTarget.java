@@ -29,7 +29,7 @@ public class LastEntityDamagerTarget extends TargetSelector {
         }
 
         final EntityDamage entityDamage = (EntityDamage) damageType;
-        final Entity entity = entityDamage.getSource();
+        final Entity entity = entityDamage.getSource().unsafeUnwrap();
 
         if (entity.isRemoved()) {
             // Entity not valid

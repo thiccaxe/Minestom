@@ -61,12 +61,7 @@ public class PaletteStorage implements PublicCloneable<PaletteStorage> {
      */
     public PaletteStorage(int bitsPerEntry, int bitsIncrement) {
         Check.argCondition(bitsPerEntry > MAXIMUM_BITS_PER_ENTRY, "The maximum bits per entry is 15");
-        // Change the bitsPerEntry to be valid
-        if (bitsPerEntry < MINIMUM_BITS_PER_ENTRY) {
-            bitsPerEntry = MINIMUM_BITS_PER_ENTRY;
-        } else if (MathUtils.isBetween(bitsPerEntry, 9, 14)) {
-            bitsPerEntry = MAXIMUM_BITS_PER_ENTRY;
-        }
+        bitsPerEntry = fixBitsPerEntry(bitsPerEntry);
 
         this.bitsPerEntry = bitsPerEntry;
         this.bitsIncrement = bitsIncrement;
@@ -229,7 +224,10 @@ public class PaletteStorage implements PublicCloneable<PaletteStorage> {
      *
      * @param newBitsPerEntry the new bits per entry count
      */
-    private synchronized void resize(int newBitsPerEntry) {
+    private void resize(int newBitsPerEntry) {
+        // FIXME: artifacts when resizing
+        newBitsPerEntry = fixBitsPerEntry(newBitsPerEntry);
+
         PaletteStorage paletteStorageCache = new PaletteStorage(newBitsPerEntry, bitsIncrement);
         paletteStorageCache.paletteBlockMaps = paletteBlockMaps;
         paletteStorageCache.blockPaletteMaps = blockPaletteMaps;
@@ -243,13 +241,12 @@ public class PaletteStorage implements PublicCloneable<PaletteStorage> {
             }
         }
 
-        this.bitsPerEntry = newBitsPerEntry;
+        this.bitsPerEntry = paletteStorageCache.bitsPerEntry;
 
         this.valuesPerLong = paletteStorageCache.valuesPerLong;
         this.hasPalette = paletteStorageCache.hasPalette;
 
         this.sectionBlocks = paletteStorageCache.sectionBlocks;
-
     }
 
     /**
@@ -402,6 +399,23 @@ public class PaletteStorage implements PublicCloneable<PaletteStorage> {
     public static int getSectionIndex(int x, int y, int z) {
         y %= CHUNK_SECTION_SIZE;
         return y << 8 | z << 4 | x;
+    }
+
+    /**
+     * Fixes invalid bitsPerEntry values.
+     * <p>
+     * See https://wiki.vg/Chunk_Format#Direct
+     *
+     * @param bitsPerEntry the bits per entry value before fixing
+     * @return the fixed bits per entry value
+     */
+    private static int fixBitsPerEntry(int bitsPerEntry) {
+        if (bitsPerEntry < MINIMUM_BITS_PER_ENTRY) {
+            return MINIMUM_BITS_PER_ENTRY;
+        } else if (MathUtils.isBetween(bitsPerEntry, 9, 14)) {
+            return MAXIMUM_BITS_PER_ENTRY;
+        }
+        return bitsPerEntry;
     }
 
 }
