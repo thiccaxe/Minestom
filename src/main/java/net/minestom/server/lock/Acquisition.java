@@ -3,7 +3,6 @@ package net.minestom.server.lock;
 import net.minestom.server.MinecraftServer;
 import net.minestom.server.thread.BatchQueue;
 import net.minestom.server.thread.BatchThread;
-import net.minestom.server.utils.thread.ThreadUtils;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
@@ -176,6 +175,11 @@ public final class Acquisition {
             return false;
         }
 
+        if (currentThread == elementThread) {
+            // Element can be acquired without any wait/block
+            return true;
+        }
+
         if (!elementThread.getMainRunnable().isInTick()) {
             // Element tick has ended and can therefore be directly accessed (with synchronization)
             return false;
@@ -187,14 +191,8 @@ public final class Acquisition {
             return true;
         }
 
-        final boolean sameThread = ThreadUtils.areSame(currentThread, elementThread);
-
-        if (sameThread) {
-            // Element can be acquired without any wait/block
-            return true;
-        } else {
-            // Element needs to be synchronized, forward a request
-
+        // Element needs to be synchronized, forward a request
+        {
             // Prevent most of contentions, the rest in handled in the acquisition scheduled service
             if (currentThread instanceof BatchThread) {
                 BatchThread batchThread = (BatchThread) currentThread;
@@ -245,7 +243,7 @@ public final class Acquisition {
         for (T element : collection) {
             final E value = element.unsafeUnwrap();
             final BatchThread elementThread = element.getHandler().getBatchThread();
-            if (ThreadUtils.areSame(currentThread, elementThread)) {
+            if (currentThread == elementThread) {
                 // The element is managed in the current thread, consumer can be immediately called
                 consumer.accept(value);
             } else {
