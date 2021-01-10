@@ -1,9 +1,6 @@
 package net.minestom.server.instance;
 
 import com.google.common.collect.Queues;
-import it.unimi.dsi.fastutil.longs.Long2ObjectMap;
-import it.unimi.dsi.fastutil.longs.Long2ObjectMaps;
-import it.unimi.dsi.fastutil.longs.Long2ObjectOpenHashMap;
 import net.minestom.server.MinecraftServer;
 import net.minestom.server.Tickable;
 import net.minestom.server.UpdateManager;
@@ -23,8 +20,8 @@ import net.minestom.server.instance.block.Block;
 import net.minestom.server.instance.block.BlockManager;
 import net.minestom.server.instance.block.CustomBlock;
 import net.minestom.server.lock.Acquirable;
+import net.minestom.server.lock.AcquirableImpl;
 import net.minestom.server.lock.LockedElement;
-import net.minestom.server.lock.type.AcquirableInstance;
 import net.minestom.server.network.packet.server.play.BlockActionPacket;
 import net.minestom.server.network.packet.server.play.TimeUpdatePacket;
 import net.minestom.server.storage.StorageLocation;
@@ -64,7 +61,7 @@ public abstract class Instance implements BlockModifier, Tickable, LockedElement
     protected static final BlockManager BLOCK_MANAGER = MinecraftServer.getBlockManager();
     protected static final UpdateManager UPDATE_MANAGER = MinecraftServer.getUpdateManager();
 
-    protected final AcquirableInstance acquirableInstance = new AcquirableInstance(this);
+    protected final Acquirable<Instance> acquirableInstance = new AcquirableImpl<>(this);
 
     private boolean registered;
 

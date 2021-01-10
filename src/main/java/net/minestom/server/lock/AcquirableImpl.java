@@ -1,8 +1,14 @@
-package net.minestom.server.lock.type;
+package net.minestom.server.lock;
 
-import net.minestom.server.lock.Acquirable;
 import org.jetbrains.annotations.NotNull;
 
+/**
+ * Basic implementation of {@link Acquirable}.
+ * <p>
+ * Class is immutable.
+ *
+ * @param <T> the object type which can be acquired
+ */
 public class AcquirableImpl<T> implements Acquirable<T> {
 
     private final T value;

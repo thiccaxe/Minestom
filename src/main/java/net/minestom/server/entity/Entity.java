@@ -18,8 +18,8 @@ import net.minestom.server.instance.Instance;
 import net.minestom.server.instance.InstanceManager;
 import net.minestom.server.instance.block.CustomBlock;
 import net.minestom.server.lock.Acquirable;
+import net.minestom.server.lock.AcquirableImpl;
 import net.minestom.server.lock.LockedElement;
-import net.minestom.server.lock.type.AcquirableEntity;
 import net.minestom.server.network.packet.server.play.*;
 import net.minestom.server.permission.Permission;
 import net.minestom.server.permission.PermissionHandler;
@@ -117,7 +117,7 @@ public abstract class Entity implements Tickable, Viewable, LockedElement, Event
     private static final UpdateOption SYNCHRONIZATION_COOLDOWN = new UpdateOption(1500, TimeUnit.MILLISECOND);
     private long lastAbsoluteSynchronizationTime;
 
-    protected final AcquirableEntity acquirableEntity = new AcquirableEntity(this);
+    protected final Acquirable<Entity> acquirableEntity = new AcquirableImpl<>(this);
 
     // Events
     private final Map<Class<? extends Event>, Collection<EventCallback>> eventCallbacks = new ConcurrentHashMap<>();

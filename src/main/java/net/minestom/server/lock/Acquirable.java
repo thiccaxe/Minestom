@@ -14,7 +14,7 @@ import java.util.function.Consumer;
  * Used for synchronization purpose.
  * <p>
  * Implementations of this class are recommended to be immutable (or at least thread-safe).
- * The default one is {@link net.minestom.server.lock.type.AcquirableImpl}.
+ * The default one is {@link AcquirableImpl}.
  *
  * @param <T> the acquirable object type
  */

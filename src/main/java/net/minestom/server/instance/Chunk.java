@@ -17,7 +17,7 @@ import net.minestom.server.instance.block.BlockManager;
 import net.minestom.server.instance.block.CustomBlock;
 import net.minestom.server.lock.Acquirable;
 import net.minestom.server.lock.LockedElement;
-import net.minestom.server.lock.type.AcquirableChunk;
+import net.minestom.server.lock.AcquirableImpl;
 import net.minestom.server.network.packet.server.play.ChunkDataPacket;
 import net.minestom.server.network.packet.server.play.UpdateLightPacket;
 import net.minestom.server.network.player.PlayerConnection;
@@ -85,7 +85,7 @@ public abstract class Chunk implements Tickable, Viewable, LockedElement, DataCo
     // Path finding
     protected PFColumnarSpace columnarSpace;
 
-    protected final AcquirableChunk acquirableChunk = new AcquirableChunk(this);
+    protected final Acquirable<Chunk> acquirableChunk = new AcquirableImpl<>(this);
 
     // Data
     protected Data data;
