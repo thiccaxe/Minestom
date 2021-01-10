@@ -20,6 +20,7 @@ import net.minestom.server.network.player.PlayerConnection;
 import net.minestom.server.utils.PacketUtils;
 import net.minestom.server.utils.async.AsyncUtils;
 import net.minestom.server.utils.callback.validator.PlayerValidator;
+import net.minestom.server.utils.collection.AcquirableCollectionView;
 import org.apache.commons.lang3.StringUtils;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
@@ -77,6 +78,11 @@ public final class ConnectionManager {
     @NotNull
     public Collection<Acquirable<Player>> getOnlinePlayers() {
         return unmodifiableAcquirablePlayers;
+    }
+
+    @NotNull
+    public Collection<Player> getUnsafeOnlinePlayers() {
+        return new AcquirableCollectionView<>(getOnlinePlayers());
     }
 
     /**
