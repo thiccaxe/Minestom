@@ -13,7 +13,7 @@ public class EntityEvent extends Event {
     }
 
     @NotNull
-    public Acquirable<Entity> getAcquirablePlayer() {
+    public Acquirable<Entity> getAcquirableEntity() {
         return entity.getAcquiredElement();
     }
 
