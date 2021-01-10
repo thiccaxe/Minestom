@@ -99,12 +99,12 @@ public final class ConnectionManager {
 
         String lowercase = username.toLowerCase();
         double currentDistance = 0;
-        for (Acquirable<Player> player : getOnlinePlayers()) {
-            final String unwrapUsername = player.unsafeUnwrap().getUsername().toLowerCase();
+        for (Player player : getUnsafeOnlinePlayers()) {
+            final String unwrapUsername = player.getUsername().toLowerCase();
             double distance = StringUtils.getJaroWinklerDistance(lowercase, unwrapUsername);
             if (distance > currentDistance) {
                 currentDistance = distance;
-                exact = player;
+                exact = player.getAcquiredElement();
             }
         }
         return exact;
@@ -120,9 +120,9 @@ public final class ConnectionManager {
      */
     @Nullable
     public Acquirable<Player> getPlayer(@NotNull String username) {
-        for (Acquirable<Player> player : getOnlinePlayers()) {
-            if (player.unsafeUnwrap().getUsername().equalsIgnoreCase(username))
-                return player;
+        for (Player player : getUnsafeOnlinePlayers()) {
+            if (player.getUsername().equalsIgnoreCase(username))
+                return player.getAcquiredElement();
         }
         return null;
     }
@@ -137,9 +137,9 @@ public final class ConnectionManager {
      */
     @Nullable
     public Acquirable<Player> getPlayer(@NotNull UUID uuid) {
-        for (Acquirable<Player> player : getOnlinePlayers()) {
-            if (player.unsafeUnwrap().getUuid().equals(uuid))
-                return player;
+        for (Player player : getUnsafeOnlinePlayers()) {
+            if (player.getUuid().equals(uuid))
+                return player.getAcquiredElement();
         }
         return null;
     }
@@ -454,8 +454,8 @@ public final class ConnectionManager {
      */
     public void shutdown() {
         DisconnectPacket disconnectPacket = new DisconnectPacket(getShutdownText());
-        for (Acquirable<Player> player : getOnlinePlayers()) {
-            final PlayerConnection playerConnection = player.unsafeUnwrap().getPlayerConnection();
+        for (Player player : getUnsafeOnlinePlayers()) {
+            final PlayerConnection playerConnection = player.getPlayerConnection();
             if (playerConnection instanceof NettyPlayerConnection) {
                 final NettyPlayerConnection nettyPlayerConnection = (NettyPlayerConnection) playerConnection;
                 final Channel channel = nettyPlayerConnection.getChannel();
