@@ -21,7 +21,7 @@ import net.minestom.server.utils.PacketUtils;
 import net.minestom.server.utils.async.AsyncUtils;
 import net.minestom.server.utils.callback.validator.PlayerValidator;
 import net.minestom.server.utils.collection.AcquirableCollectionView;
-import org.apache.commons.lang3.StringUtils;
+import org.apache.commons.text.similarity.JaroWinklerDistance;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
@@ -101,7 +101,7 @@ public final class ConnectionManager {
         double currentDistance = 0;
         for (Player player : getUnsafeOnlinePlayers()) {
             final String unwrapUsername = player.getUsername().toLowerCase();
-            double distance = StringUtils.getJaroWinklerDistance(lowercase, unwrapUsername);
+            final double distance = new JaroWinklerDistance().apply(lowercase, unwrapUsername);
             if (distance > currentDistance) {
                 currentDistance = distance;
                 exact = player.getAcquiredElement();
