@@ -242,7 +242,7 @@ public final class Acquisition {
 
         for (T element : collection) {
             final E value = element.unsafeUnwrap();
-            final BatchThread elementThread = element.getHandler().getBatchThread();
+            final BatchThread elementThread = element.getHandler().getBatchInfo().getBatchThread();
             if (currentThread == elementThread) {
                 // The element is managed in the current thread, consumer can be immediately called
                 consumer.accept(value);

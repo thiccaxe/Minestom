@@ -20,6 +20,8 @@ public class BatchSetupHandler implements BatchHandler {
     private static final int CHUNK_COST = 5;
     private static final int ENTITY_COST = 5;
 
+    private final BatchInfo batchInfo = new BatchInfo();
+
     private final ArrayList<Acquirable<?>> elements = new ArrayList<>();
     private int estimatedCost;
 
@@ -60,12 +62,8 @@ public class BatchSetupHandler implements BatchHandler {
 
         Check.notNull(fitThread, "The task thread returned null, something went terribly wrong.");
 
-        // The thread has been decided, all elements need to be have its identifier
-        {
-            for (Acquirable<?> element : elements) {
-                element.getHandler().refreshThread(fitThread);
-            }
-        }
+        // The thread has been decided
+        this.batchInfo.refreshThread(fitThread);
 
         // Create the runnable and send it to the thread for execution in the next tick
         final Runnable runnable = createRunnable(time);
@@ -86,6 +84,10 @@ public class BatchSetupHandler implements BatchHandler {
     }
 
     private void addAcquirable(Acquirable<?> acquirable, int estimatedCost) {
+        // Set the BatchInfo field
+        Acquirable.Handler handler = acquirable.getHandler();
+        handler.refreshBatchInfo(batchInfo);
+
         this.elements.add(acquirable);
         this.estimatedCost += estimatedCost;
     }
