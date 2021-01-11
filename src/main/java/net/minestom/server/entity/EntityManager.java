@@ -39,7 +39,8 @@ public final class EntityManager {
     public void handleKeepAlive(long tickStart) {
         final KeepAlivePacket keepAlivePacket = new KeepAlivePacket(tickStart);
 
-        // Unsafe loop, shouldn't create any issue
+        // Unsafe loop, shouldn't create any issue since missing a keep alive tick
+        // does not affect the overall server playability
         for (Player player : CONNECTION_MANAGER.getUnsafeOnlinePlayers()) {
             final long lastKeepAlive = tickStart - player.getLastKeepAlive();
             if (lastKeepAlive > KEEP_ALIVE_DELAY && player.didAnswerKeepAlive()) {

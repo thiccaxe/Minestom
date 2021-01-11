@@ -99,6 +99,7 @@ public final class ConnectionManager {
 
         String lowercase = username.toLowerCase();
         double currentDistance = 0;
+        // Unsafe loop, ok because we are only comparing usernames
         for (Player player : getUnsafeOnlinePlayers()) {
             final String unwrapUsername = player.getUsername().toLowerCase();
             final double distance = new JaroWinklerDistance().apply(lowercase, unwrapUsername);
@@ -120,6 +121,7 @@ public final class ConnectionManager {
      */
     @Nullable
     public Acquirable<Player> getPlayer(@NotNull String username) {
+        // Unsafe loop, ok because we are only comparing usernames
         for (Player player : getUnsafeOnlinePlayers()) {
             if (player.getUsername().equalsIgnoreCase(username))
                 return player.getAcquiredElement();
@@ -137,6 +139,7 @@ public final class ConnectionManager {
      */
     @Nullable
     public Acquirable<Player> getPlayer(@NotNull UUID uuid) {
+        // Unsafe loop, ok because we are only comparing UUIDs
         for (Player player : getUnsafeOnlinePlayers()) {
             if (player.getUuid().equals(uuid))
                 return player.getAcquiredElement();
@@ -454,6 +457,7 @@ public final class ConnectionManager {
      */
     public void shutdown() {
         DisconnectPacket disconnectPacket = new DisconnectPacket(getShutdownText());
+        // Unsafe loop, ok because we are only sending a packet, which is a thread-safe operation
         for (Player player : getUnsafeOnlinePlayers()) {
             final PlayerConnection playerConnection = player.getPlayerConnection();
             if (playerConnection instanceof NettyPlayerConnection) {
