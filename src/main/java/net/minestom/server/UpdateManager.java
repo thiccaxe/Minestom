@@ -90,8 +90,6 @@ public final class UpdateManager {
                 final long tickTime = System.nanoTime() - currentTime;
                 final double tickTimeMs = tickTime / 1e6D;
 
-                System.out.println("tick ms= " + tickTimeMs);
-
                 // Tick end callbacks
                 doTickCallback(tickEndCallbacks, tickTimeMs);
 
