@@ -74,7 +74,13 @@ public abstract class Entity implements Tickable, Viewable, LockedElement, Event
     protected static final byte METADATA_ROTATION = 8;
     protected static final byte METADATA_POSITION = 9;
     protected static final byte METADATA_OPTPOSITION = 10;
+    protected static final byte METADATA_DIRECTION = 11;
+    protected static final byte METADATA_OPTUUID = 12;
+    protected static final byte METADATA_OPTBLOCKID = 13;
+    protected static final byte METADATA_NBT = 14;
     protected static final byte METADATA_PARTICLE = 15;
+    protected static final byte METADATA_VILLAGERDATA = 16;
+    protected static final byte METADATA_OPTVARINT = 17;
     protected static final byte METADATA_POSE = 18;
 
     protected Instance instance;
@@ -243,7 +249,6 @@ public abstract class Entity implements Tickable, Viewable, LockedElement, Event
      * @throws IllegalStateException if you try to teleport an entity before settings its instance
      */
     public void teleport(@NotNull Position position, @Nullable long[] chunks, @Nullable Runnable callback) {
-        Check.notNull(position, "Teleport position cannot be null");
         Check.stateCondition(instance == null, "You need to use Entity#setInstance before teleporting an entity!");
 
         final ChunkCallback endCallback = (chunk) -> {
@@ -330,7 +335,6 @@ public abstract class Entity implements Tickable, Viewable, LockedElement, Event
 
     @Override
     public boolean addViewer(@NotNull Player player) {
-        Check.notNull(player, "Viewer cannot be null");
         boolean result = this.viewers.add(player.getAcquiredElement());
         if (!result)
             return false;
@@ -340,7 +344,6 @@ public abstract class Entity implements Tickable, Viewable, LockedElement, Event
 
     @Override
     public boolean removeViewer(@NotNull Player player) {
-        Check.notNull(player, "Viewer cannot be null");
         if (!viewers.remove(player.getAcquiredElement()))
             return false;
 
@@ -500,9 +503,6 @@ public abstract class Entity implements Tickable, Viewable, LockedElement, Event
 
                 this.onGround = CollisionUtils.handlePhysics(this, deltaPos, newPosition, newVelocityOut);
 
-                // Stop here if the position is the same
-                final boolean updatePosition = !newPosition.isSimilar(position);
-
                 // World border collision
                 final Position finalVelocityPosition = CollisionUtils.applyWorldBorder(instance, position, newPosition);
                 final Chunk finalChunk = instance.getChunkAt(finalVelocityPosition);
@@ -512,8 +512,8 @@ public abstract class Entity implements Tickable, Viewable, LockedElement, Event
                     return;
                 }
 
-                // Apply the position
-                if (updatePosition) {
+                // Apply the position if changed
+                if (!newPosition.isSimilar(position)) {
                     refreshPosition(finalVelocityPosition);
                 }
 
@@ -733,6 +733,17 @@ public abstract class Entity implements Tickable, Viewable, LockedElement, Event
     }
 
     /**
+     * Changes the internal entity bounding box.
+     * <p>
+     * WARNING: this does not change the entity hit-box which is client-side.
+     *
+     * @param boundingBox the new bounding box
+     */
+    public void setBoundingBox(BoundingBox boundingBox) {
+        this.boundingBox = boundingBox;
+    }
+
+    /**
      * Convenient method to get the entity current chunk.
      *
      * @return the entity chunk, can be null even if unlikely
@@ -760,7 +771,6 @@ public abstract class Entity implements Tickable, Viewable, LockedElement, Event
      * @throws IllegalStateException if {@code instance} has not been registered in {@link InstanceManager}
      */
     public void setInstance(@NotNull Instance instance) {
-        Check.notNull(instance, "instance cannot be null!");
         Check.stateCondition(!instance.isRegistered(),
                 "Instances need to be registered, please use InstanceManager#registerInstance or InstanceManager#registerSharedInstance");
 
@@ -869,7 +879,6 @@ public abstract class Entity implements Tickable, Viewable, LockedElement, Event
      * @return the distance between this and {@code entity}
      */
     public float getDistance(@NotNull Entity entity) {
-        Check.notNull(entity, "Entity cannot be null");
         return getPosition().getDistance(entity.getPosition());
     }
 
@@ -891,7 +900,6 @@ public abstract class Entity implements Tickable, Viewable, LockedElement, Event
      * @throws IllegalStateException if {@link #getInstance()} returns null
      */
     public void addPassenger(@NotNull Entity entity) {
-        Check.notNull(entity, "Passenger cannot be null");
         Check.stateCondition(instance == null, "You need to set an instance using Entity#setInstance");
 
         if (entity.getVehicle() != null) {
@@ -913,7 +921,6 @@ public abstract class Entity implements Tickable, Viewable, LockedElement, Event
      * @throws IllegalStateException if {@link #getInstance()} returns null
      */
     public void removePassenger(@NotNull Entity entity) {
-        Check.notNull(entity, "Passenger cannot be null");
         Check.stateCondition(instance == null, "You need to set an instance using Entity#setInstance");
 
         if (!passengers.remove(entity))

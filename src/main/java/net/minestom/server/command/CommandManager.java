@@ -2,6 +2,7 @@ package net.minestom.server.command;
 
 import it.unimi.dsi.fastutil.ints.IntArrayList;
 import it.unimi.dsi.fastutil.ints.IntList;
+import net.minestom.server.MinecraftServer;
 import net.minestom.server.command.builder.Command;
 import net.minestom.server.command.builder.CommandDispatcher;
 import net.minestom.server.command.builder.CommandSyntax;
@@ -63,7 +64,7 @@ public final class CommandManager {
                         execute(consoleSender, command);
                     }
                 } catch (IOException e) {
-                    e.printStackTrace();
+                    MinecraftServer.getExceptionManager().handleException(e);
                     continue;
                 }
 
@@ -71,14 +72,14 @@ public final class CommandManager {
                 try {
                     Thread.sleep(200);
                 } catch (InterruptedException e) {
-                    e.printStackTrace();
+                    MinecraftServer.getExceptionManager().handleException(e);
                 }
 
             }
             try {
                 bi.close();
             } catch (IOException e) {
-                e.printStackTrace();
+                MinecraftServer.getExceptionManager().handleException(e);
             }
         }, "ConsoleCommand-Thread");
         consoleThread.setDaemon(true);
@@ -185,8 +186,6 @@ public final class CommandManager {
      * @return true if the command hadn't been cancelled and has been successful
      */
     public boolean execute(@NotNull CommandSender sender, @NotNull String command) {
-        Check.notNull(sender, "Source cannot be null");
-        Check.notNull(command, "Command string cannot be null");
 
         // Command event
         if (sender instanceof Player) {
@@ -509,7 +508,6 @@ public final class CommandManager {
             DeclareCommandsPacket.Node argumentNode = simpleArgumentNode(nodes, argument, executable, false);
 
             argumentNode.parser = "brigadier:bool";
-            argumentNode.properties = packetWriter -> packetWriter.writeByte((byte) 0);
         } else if (argument instanceof ArgumentDouble) {
             DeclareCommandsPacket.Node argumentNode = simpleArgumentNode(nodes, argument, executable, false);
 

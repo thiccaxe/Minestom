@@ -227,10 +227,11 @@ public class Player extends LivingEntity implements CommandSender {
      * Init the player and spawn him.
      * <p>
      * WARNING: executed in the main update thread
+     * UNSAFE: Only meant to be used when a netty player connects through the server.
      *
      * @param spawnInstance the player spawn instance (defined in {@link PlayerLoginEvent})
      */
-    protected void init(@NotNull Instance spawnInstance) {
+    public void UNSAFE_init(@NotNull Instance spawnInstance) {
         this.dimensionType = spawnInstance.getDimensionType();
 
         JoinGamePacket joinGamePacket = new JoinGamePacket();
@@ -533,7 +534,7 @@ public class Player extends LivingEntity implements CommandSender {
 
             // #buildDeathScreenText can return null, check here
             if (deathText != null) {
-                CombatEventPacket deathPacket = CombatEventPacket.death(this, Optional.empty(), deathText);
+                CombatEventPacket deathPacket = CombatEventPacket.death(this, null, deathText);
                 playerConnection.sendPacket(deathPacket);
             }
 
@@ -667,7 +668,6 @@ public class Player extends LivingEntity implements CommandSender {
      * @param spawnPosition the new position of the player
      */
     public void setInstance(@NotNull Instance instance, @NotNull Position spawnPosition) {
-        Check.notNull(instance, "instance cannot be null!");
         Check.argCondition(this.instance == instance, "Instance should be different than the current one");
 
         // true if the chunks need to be sent to the client, can be false if the instances share the same chunks (eg SharedInstance)
@@ -1362,7 +1362,6 @@ public class Player extends LivingEntity implements CommandSender {
      * @param resourcePack the resource pack
      */
     public void setResourcePack(@NotNull ResourcePack resourcePack) {
-        Check.notNull(resourcePack, "The resource pack cannot be null");
         final String url = resourcePack.getUrl();
         final String hash = resourcePack.getHash();
 
@@ -1735,7 +1734,6 @@ public class Player extends LivingEntity implements CommandSender {
      * @param gameMode the new player GameMode
      */
     public void setGameMode(@NotNull GameMode gameMode) {
-        Check.notNull(gameMode, "GameMode cannot be null");
         this.gameMode = gameMode;
 
         // Condition to prevent sending the packets before spawning the player
@@ -1764,7 +1762,6 @@ public class Player extends LivingEntity implements CommandSender {
      * @param dimensionType the new player dimension
      */
     protected void sendDimension(@NotNull DimensionType dimensionType) {
-        Check.notNull(dimensionType, "Dimension cannot be null!");
         Check.argCondition(dimensionType.equals(getDimensionType()), "The dimension needs to be different than the current one!");
 
         this.dimensionType = dimensionType;
@@ -1898,7 +1895,6 @@ public class Player extends LivingEntity implements CommandSender {
      * @return true if the inventory has been opened/sent to the player, false otherwise (cancelled by event)
      */
     public boolean openInventory(@NotNull Inventory inventory) {
-        Check.notNull(inventory, "Inventory cannot be null, use Player#closeInventory() to close current");
 
         InventoryOpenEvent inventoryOpenEvent = new InventoryOpenEvent(inventory, this);
 

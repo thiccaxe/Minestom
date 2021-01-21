@@ -5,10 +5,10 @@ import net.minestom.server.command.CommandManager;
 import net.minestom.server.data.DataManager;
 import net.minestom.server.data.DataType;
 import net.minestom.server.data.SerializableData;
-import net.minestom.server.entity.EntityManager;
 import net.minestom.server.entity.EntityType;
 import net.minestom.server.entity.Player;
 import net.minestom.server.event.GlobalEventHandler;
+import net.minestom.server.exception.ExceptionManager;
 import net.minestom.server.extensions.Extension;
 import net.minestom.server.extensions.ExtensionManager;
 import net.minestom.server.fluids.Fluid;
@@ -58,7 +58,6 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
-import java.util.Collection;
 
 /**
  * The main server class used to start the server and retrieve all the managers.
@@ -70,7 +69,7 @@ public final class MinecraftServer {
 
     public final static Logger LOGGER = LoggerFactory.getLogger(MinecraftServer.class);
 
-    public static final String VERSION_NAME = "1.16.4";
+    public static final String VERSION_NAME = "1.16.5";
     public static final int PROTOCOL_VERSION = 754;
 
     // Threads
@@ -104,11 +103,12 @@ public final class MinecraftServer {
     private static int nettyThreadCount = Runtime.getRuntime().availableProcessors();
     private static boolean processNettyErrors = false;
 
+    private static ExceptionManager exceptionManager;
+
     // In-Game Manager
     private static ConnectionManager connectionManager;
     private static InstanceManager instanceManager;
     private static BlockManager blockManager;
-    private static EntityManager entityManager;
     private static CommandManager commandManager;
     private static RecipeManager recipeManager;
     private static StorageManager storageManager;
@@ -147,6 +147,10 @@ public final class MinecraftServer {
     public static MinecraftServer init() {
         if (minecraftServer != null) // don't init twice
             return minecraftServer;
+
+        // Initialize the ExceptionManager at first
+        exceptionManager = new ExceptionManager();
+
         extensionManager = new ExtensionManager();
 
         // warmup/force-init registries
@@ -171,7 +175,6 @@ public final class MinecraftServer {
 
         instanceManager = new InstanceManager();
         blockManager = new BlockManager();
-        entityManager = new EntityManager();
         commandManager = new CommandManager();
         recipeManager = new RecipeManager();
         storageManager = new StorageManager();
@@ -221,7 +224,6 @@ public final class MinecraftServer {
      * @throws NullPointerException if {@code brandName} is null
      */
     public static void setBrandName(@NotNull String brandName) {
-        Check.notNull(brandName, "The brand name cannot be null");
         MinecraftServer.brandName = brandName;
 
         PacketUtils.sendGroupedPacket(connectionManager.getOnlinePlayers(), PluginMessagePacket.getBrandPacket());
@@ -279,7 +281,6 @@ public final class MinecraftServer {
      * @param difficulty the new server difficulty
      */
     public static void setDifficulty(@NotNull Difficulty difficulty) {
-        Check.notNull(difficulty, "The server difficulty cannot be null.");
         MinecraftServer.difficulty = difficulty;
 
         // Send the packet to all online players
@@ -339,16 +340,6 @@ public final class MinecraftServer {
     public static BlockManager getBlockManager() {
         checkInitStatus(blockManager);
         return blockManager;
-    }
-
-    /**
-     * Gets the manager handling waiting players.
-     *
-     * @return the entity manager
-     */
-    public static EntityManager getEntityManager() {
-        checkInitStatus(entityManager);
-        return entityManager;
     }
 
     /**
@@ -419,6 +410,16 @@ public final class MinecraftServer {
     public static BenchmarkManager getBenchmarkManager() {
         checkInitStatus(benchmarkManager);
         return benchmarkManager;
+    }
+
+    /**
+     * Gets the exception manager for exception handling.
+     *
+     * @return the exception manager
+     */
+    public static ExceptionManager getExceptionManager() {
+        checkInitStatus(exceptionManager);
+        return exceptionManager;
     }
 
     /**

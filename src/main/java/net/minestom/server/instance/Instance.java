@@ -763,8 +763,8 @@ public abstract class Instance implements BlockModifier, Tickable, LockedElement
      */
     @Nullable
     public Chunk getChunkAt(float x, float z) {
-        final int chunkX = ChunkUtils.getChunkCoordinate((int) x);
-        final int chunkZ = ChunkUtils.getChunkCoordinate((int) z);
+        final int chunkX = ChunkUtils.getChunkCoordinate((int) Math.floor(x));
+        final int chunkZ = ChunkUtils.getChunkCoordinate((int) Math.floor(z));
         return getChunk(chunkX, chunkZ);
     }
 

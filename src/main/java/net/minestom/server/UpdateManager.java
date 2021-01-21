@@ -7,6 +7,7 @@ import net.minestom.server.instance.Instance;
 import net.minestom.server.instance.InstanceManager;
 import net.minestom.server.lock.Acquisition;
 import net.minestom.server.monitoring.TickMonitor;
+import net.minestom.server.network.ConnectionManager;
 import net.minestom.server.thread.PerInstanceThreadProvider;
 import net.minestom.server.thread.ThreadProvider;
 import org.jetbrains.annotations.NotNull;
@@ -62,7 +63,7 @@ public final class UpdateManager {
      * Starts the server loop in the update thread.
      */
     protected void start() {
-        final EntityManager entityManager = MinecraftServer.getEntityManager();
+        final ConnectionManager connectionManager = MinecraftServer.getConnectionManager();
 
         updateExecutionService.scheduleAtFixedRate(() -> {
             try {
@@ -78,10 +79,10 @@ public final class UpdateManager {
                 doTickCallback(tickStartCallbacks, tickStart);
 
                 // Waiting players update (newly connected clients waiting to get into the server)
-                entityManager.updateWaitingPlayers();
+                connectionManager.updateWaitingPlayers();
 
                 // Keep Alive Handling
-                entityManager.handleKeepAlive(tickStart);
+                connectionManager.handleKeepAlive(tickStart);
 
                 // Server tick (chunks/entities)
                 serverTick(tickStart);
@@ -104,7 +105,7 @@ public final class UpdateManager {
                 }
 
             } catch (Exception e) {
-                e.printStackTrace();
+                MinecraftServer.getExceptionManager().handleException(e);
             }
         }, 0, MinecraftServer.TICK_MS, TimeUnit.MILLISECONDS);
     }
@@ -127,7 +128,7 @@ public final class UpdateManager {
         try {
             countDownLatch.await();
         } catch (InterruptedException e) {
-            e.printStackTrace();
+            MinecraftServer.getExceptionManager().handleException(e);
         }
     }
 

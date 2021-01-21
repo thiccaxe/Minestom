@@ -1,6 +1,7 @@
 package net.minestom.server.utils.entity;
 
 import it.unimi.dsi.fastutil.objects.Object2BooleanOpenHashMap;
+import net.minestom.server.MinecraftServer;
 import net.minestom.server.entity.Entity;
 import net.minestom.server.entity.EntityType;
 import net.minestom.server.entity.GameMode;
@@ -98,13 +99,16 @@ public class EntityFinder {
     /**
      * Find a list of entities (could be empty) based on the conditions
      *
+     * @param instance the instance to search from,
+     *                 null if the query can be executed using global data (all online players)
+     * @param self     the source of the query, null if not any
      * @return all entities validating the conditions, can be empty
      */
     @NotNull
-    public List<Acquirable<? extends Entity>> find(@NotNull Instance instance, @Nullable Entity self) {
+    public List<Acquirable<? extends Entity>> find(@Nullable Instance instance, @Nullable Entity self) {
         List<Acquirable<? extends Entity>> result = findTarget(instance, targetSelector, startPosition, self);
 
-        // Fast exist if there is nothing to process
+        // Fast exit if there is nothing to process
         if (result.isEmpty())
             return result;
 
@@ -219,6 +223,24 @@ public class EntityFinder {
         return result;
     }
 
+    /**
+     * Shortcut of {@link #find(Instance, Entity)} to retrieve the first
+     * player element in the list.
+     *
+     * @return the first player returned by {@link #find(Instance, Entity)}
+     * @see #find(Instance, Entity)
+     */
+    @Nullable
+    public Player findFirstPlayer(@Nullable Instance instance, @Nullable Entity self) {
+        List<Entity> entities = find(instance, self);
+        for (Entity entity : entities) {
+            if (entity instanceof Player) {
+                return (Player) entity;
+            }
+        }
+        return null;
+    }
+
     public enum TargetSelector {
         NEAREST_PLAYER, RANDOM_PLAYER, ALL_PLAYERS, ALL_ENTITIES, SELF
     }
@@ -249,14 +271,15 @@ public class EntityFinder {
     }
 
     @NotNull
-    private static List<Acquirable<? extends Entity>> findTarget(@NotNull Instance instance, @NotNull TargetSelector targetSelector,
+    private static List<Acquirable<? extends Entity>> findTarget(@Nullable Instance instance, @NotNull TargetSelector targetSelector,
                                                                  @NotNull Position startPosition, @Nullable Entity self) {
 
         if (targetSelector == TargetSelector.NEAREST_PLAYER) {
             Acquirable<Player> entity = null;
             float closestDistance = Float.MAX_VALUE;
 
-            Set<Acquirable<Player>> instancePlayers = instance.getPlayers();
+            Collection<Acquirable<Player>> instancePlayers = instance != null ?
+                    instance.getPlayers() : MinecraftServer.getConnectionManager().getOnlinePlayers();
             for (Acquirable<Player> player : instancePlayers) {
                 final float distance = player.unsafeUnwrap().getPosition().getDistance(startPosition);
                 if (distance < closestDistance) {
@@ -264,18 +287,20 @@ public class EntityFinder {
                     closestDistance = distance;
                 }
             }
-            return Arrays.asList(entity);
+            return Collections.singletonList(entity);
         } else if (targetSelector == TargetSelector.RANDOM_PLAYER) {
-            Set<Acquirable<Player>> instancePlayers = instance.getPlayers();
+            Collection<Acquirable<Player>> instancePlayers = instance != null ?
+                    instance.getPlayers() : MinecraftServer.getConnectionManager().getOnlinePlayers();
             final int index = ThreadLocalRandom.current().nextInt(instancePlayers.size());
             final Acquirable<Player> acquirablePlayer = instancePlayers.stream().skip(index).findFirst().orElseThrow();
-            return Arrays.asList(acquirablePlayer);
+            return Collections.singletonList(acquirablePlayer);
         } else if (targetSelector == TargetSelector.ALL_PLAYERS) {
-            return new ArrayList<>(instance.getPlayers());
+            return new ArrayList<>(instance != null ?
+                    instance.getPlayers() : MinecraftServer.getConnectionManager().getOnlinePlayers());
         } else if (targetSelector == TargetSelector.ALL_ENTITIES) {
             return new ArrayList<>(instance.getEntities());
         } else if (targetSelector == TargetSelector.SELF) {
-            return Arrays.asList(self.getAcquiredElement());
+            return Collections.singletonList(self.getAcquiredElement());
         }
         throw new IllegalStateException("Weird thing happened");
     }
