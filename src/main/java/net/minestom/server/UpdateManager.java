@@ -90,6 +90,8 @@ public final class UpdateManager {
                 final long tickTime = System.nanoTime() - currentTime;
                 final double tickTimeMs = tickTime / 1e6D;
 
+                System.out.println("tick ms= " + tickTimeMs);
+
                 // Tick end callbacks
                 doTickCallback(tickEndCallbacks, tickTimeMs);
 
@@ -118,7 +120,7 @@ public final class UpdateManager {
         // Server tick (instance/chunk/entity)
         // Synchronize with the update manager instance, like the signal for chunk load/unload
         synchronized (this) {
-            this.threadProvider.update(tickStart);
+            this.threadProvider.prepareUpdate(tickStart);
         }
 
         CountDownLatch countDownLatch = threadProvider.notifyThreads();
