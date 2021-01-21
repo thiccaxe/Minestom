@@ -24,9 +24,8 @@ import net.minestom.server.utils.PacketUtils;
 import net.minestom.server.utils.async.AsyncUtils;
 import net.minestom.server.utils.callback.validator.PlayerValidator;
 import net.minestom.server.utils.collection.AcquirableCollectionView;
-import org.apache.commons.text.similarity.JaroWinklerDistance;
 import net.minestom.server.utils.validate.Check;
-import org.apache.commons.lang3.StringUtils;
+import org.apache.commons.text.similarity.JaroWinklerDistance;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
@@ -503,7 +502,10 @@ public final class ConnectionManager {
      */
     public void handleKeepAlive(long tickStart) {
         final KeepAlivePacket keepAlivePacket = new KeepAlivePacket(tickStart);
-        for (Player player : getOnlinePlayers()) {
+
+        // Unsafe loop, shouldn't create any issue since missing a keep alive tick
+        // does not affect the overall server playability
+        for (Player player : getUnsafeOnlinePlayers()) {
             final long lastKeepAlive = tickStart - player.getLastKeepAlive();
             if (lastKeepAlive > KEEP_ALIVE_DELAY && player.didAnswerKeepAlive()) {
                 final PlayerConnection playerConnection = player.getPlayerConnection();

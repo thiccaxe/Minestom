@@ -232,8 +232,9 @@ public class EntityFinder {
      */
     @Nullable
     public Player findFirstPlayer(@Nullable Instance instance, @Nullable Entity self) {
-        List<Entity> entities = find(instance, self);
-        for (Entity entity : entities) {
+        List<Acquirable<? extends Entity>> entities = find(instance, self);
+        for (Acquirable<? extends Entity> acquirableEntity : entities) {
+            final Entity entity = acquirableEntity.unsafeUnwrap();
             if (entity instanceof Player) {
                 return (Player) entity;
             }
