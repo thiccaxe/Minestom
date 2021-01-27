@@ -29,7 +29,12 @@ public interface Acquirable<T> {
         final Thread currentThread = Thread.currentThread();
         Acquisition.AcquisitionData data = new Acquisition.AcquisitionData();
 
-        final boolean sameThread = Acquisition.acquire(currentThread, getHandler().getBatchInfo().getBatchThread(), data);
+        final Handler handler = getHandler();
+        final BatchInfo batchInfo = handler.getBatchInfo();
+        final BatchThread elementThread = batchInfo != null ? batchInfo.getBatchThread() : null;
+
+        final boolean sameThread = Acquisition.acquire(currentThread, elementThread, data);
+
         final T unwrap = unsafeUnwrap();
         if (sameThread) {
             consumer.accept(unwrap);

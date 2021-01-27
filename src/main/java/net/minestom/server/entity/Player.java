@@ -29,6 +29,7 @@ import net.minestom.server.item.ItemStack;
 import net.minestom.server.item.Material;
 import net.minestom.server.item.metadata.WrittenBookMeta;
 import net.minestom.server.listener.PlayerDiggingListener;
+import net.minestom.server.lock.Acquirable;
 import net.minestom.server.network.ConnectionManager;
 import net.minestom.server.network.ConnectionState;
 import net.minestom.server.network.PlayerProvider;
@@ -336,6 +337,22 @@ public class Player extends LivingEntity implements CommandSender {
         ClientPlayPacket packet;
         while ((packet = packets.poll()) != null) {
             packet.process(this);
+        }
+
+        // TODO REMOVE
+        {
+            for (Acquirable<Player> acquirable : MinecraftServer.getConnectionManager().getOnlinePlayers()) {
+                if (acquirable.unsafeUnwrap() == this){
+                    continue;
+                }
+
+                acquirable.acquire(player -> {
+
+                    player.getAcquiredElement().acquire(o -> {
+                        System.out.println("acquire work "+player.getUsername());
+                    });
+                });
+            }
         }
 
         super.update(time); // Super update (item pickup/fire management)

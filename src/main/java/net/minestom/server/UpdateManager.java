@@ -7,6 +7,7 @@ import net.minestom.server.instance.InstanceManager;
 import net.minestom.server.lock.Acquisition;
 import net.minestom.server.monitoring.TickMonitor;
 import net.minestom.server.network.ConnectionManager;
+import net.minestom.server.thread.PerChunkThreadProvider;
 import net.minestom.server.thread.PerInstanceThreadProvider;
 import net.minestom.server.thread.ThreadProvider;
 import org.jetbrains.annotations.NotNull;
@@ -48,8 +49,8 @@ public final class UpdateManager {
 
         final int threadCount = 2;
 
-        //threadProvider = new PerChunkThreadProvider(threadCount);
-        threadProvider = new PerInstanceThreadProvider(threadCount);
+        threadProvider = new PerChunkThreadProvider(threadCount);
+        //threadProvider = new PerInstanceThreadProvider(threadCount);
     }
 
     /**

@@ -32,9 +32,11 @@ public final class Acquisition {
 
             for (BatchThread batchThread : threads) {
                 final BatchThread waitingThread = (BatchThread) batchThread.getQueue().getWaitingThread();
-                if (waitingThread != null && waitingThread.getState() == Thread.State.WAITING &&
-                        batchThread.getState() == Thread.State.WAITING) {
-                    processQueue(waitingThread.getQueue());
+                if (waitingThread != null) {
+                    if (waitingThread.getState() == Thread.State.WAITING &&
+                            batchThread.getState() == Thread.State.WAITING) {
+                        processQueue(waitingThread.getQueue());
+                    }
                 }
             }
 
@@ -139,7 +141,7 @@ public final class Acquisition {
         phaser.arriveAndAwaitAdvance();
     }
 
-    public synchronized static void processThreadTick(@NotNull BatchQueue queue) {
+    public static void processThreadTick(@NotNull BatchQueue queue) {
         processQueue(queue);
 
         ScheduledAcquisition scheduledAcquisition = SCHEDULED_ACQUISITION.get();
@@ -176,7 +178,7 @@ public final class Acquisition {
         }
 
         if (currentThread == elementThread) {
-            // Element can be acquired without any wait/block
+            // Element can be acquired without any wait/block because threads are the same
             return true;
         }
 
@@ -186,8 +188,10 @@ public final class Acquisition {
         }
 
         final List<Thread> acquiredThread = ACQUIRED_THREADS.get();
+        System.out.println("size " + acquiredThread.size());
         if (acquiredThread.contains(elementThread)) {
-            // This thread is already acquiring the thread
+            // This thread is already acquiring the element thread
+            System.out.println("ALERADY");
             return true;
         }
 
@@ -207,6 +211,7 @@ public final class Acquisition {
                 }
 
                 final BatchQueue periodQueue = elementThread.getQueue();
+                System.out.println("test " + elementThread + " " + currentThread);
                 synchronized (periodQueue) {
                     acquiredThread.add(elementThread);
                     periodQueue.setWaitingThread(elementThread);

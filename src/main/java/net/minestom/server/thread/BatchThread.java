@@ -101,7 +101,7 @@ public class BatchThread extends Thread {
         }
 
         public synchronized void startTick(@NotNull CountDownLatch countDownLatch) {
-            synchronized (tickLock){
+            synchronized (tickLock) {
                 this.countDownLatch = countDownLatch;
                 this.tickLock.notifyAll();
             }
