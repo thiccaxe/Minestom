@@ -191,7 +191,6 @@ public final class Acquisition {
         }
 
         final List<Thread> acquiredThread = ACQUIRED_THREADS.get();
-        System.out.println("size "+acquiredThread.size());
         if (acquiredThread.contains(elementThread)) {
             // This thread is already acquiring the element thread
             return true;
