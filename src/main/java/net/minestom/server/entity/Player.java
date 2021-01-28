@@ -341,18 +341,21 @@ public class Player extends LivingEntity implements CommandSender {
 
         // TODO REMOVE
         {
-            for (Acquirable<Player> acquirable : MinecraftServer.getConnectionManager().getOnlinePlayers()) {
-                if (acquirable.unsafeUnwrap() == this){
-                    continue;
-                }
+            //if (getEntityId() == 1)
+                for (Acquirable<Player> acquirable : MinecraftServer.getConnectionManager().getOnlinePlayers()) {
+                    if (acquirable.unsafeUnwrap() == this) {
+                        continue;
+                    }
 
-                acquirable.acquire(player -> {
+                    long t = System.nanoTime();
+                    acquirable.acquire(player -> {
 
-                    player.getAcquiredElement().acquire(o -> {
-                        System.out.println("acquire work "+player.getUsername());
+                        player.getAcquiredElement().acquire(o -> {
+                            //System.out.println("acquire work "+player.getUsername());
+                        });
                     });
-                });
-            }
+                    System.out.println("final " + (System.nanoTime() - t) / 1E6D);
+                }
         }
 
         super.update(time); // Super update (item pickup/fire management)

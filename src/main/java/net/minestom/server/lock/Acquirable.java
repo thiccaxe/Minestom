@@ -5,6 +5,7 @@ import net.minestom.server.thread.batch.BatchInfo;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
+import java.util.List;
 import java.util.concurrent.Phaser;
 import java.util.function.Consumer;
 
@@ -42,12 +43,20 @@ public interface Acquirable<T> {
             synchronized (unwrap) {
                 consumer.accept(unwrap);
             }
-            // Notify the end of the task if required
-            Phaser phaser = data.getPhaser();
-            if (phaser != null) {
-                phaser.arriveAndDeregister();
-            }
         }
+
+        // Remove the previously acquired thread from the local list
+        List<Thread> acquiredThreads = data.getAcquiredThreads();
+        if (acquiredThreads != null) {
+            acquiredThreads.remove(elementThread);
+        }
+
+        // Notify the end of the task if required
+        Phaser phaser = data.getPhaser();
+        if (phaser != null) {
+            phaser.arriveAndDeregister();
+        }
+
     }
 
     /**

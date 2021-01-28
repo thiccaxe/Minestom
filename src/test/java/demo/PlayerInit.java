@@ -267,24 +267,6 @@ public class PlayerInit {
                 //player.getInstance().unloadChunk(chunk);
             }
         });
-
-        globalEventHandler.addEventCallback(PlayerLoginEvent.class, event -> {
-            //event.setPlayerUuid(UUID.randomUUID());
-            //System.out.println("random "+event.getPlayerUuid());
-            System.out.println("lOGIN EVENT");
-        });
-
-        globalEventHandler.addEventCallback(AsyncPlayerPreLoginEvent.class, event -> {
-            //event.setPlayerUuid(UUID.randomUUID());
-            //System.out.println("random "+event.getPlayerUuid());
-            //event.getPlayer().kick("test");
-            System.out.println("PRElOGIN EVENT");
-
-        });
-
-        globalEventHandler.addEventCallback(PlayerSkinInitEvent.class, event -> {
-            //event.setSkin(PlayerSkin.fromUsername("TheMode911"));
-        });
     }
 
     public static ResponseDataConsumer getResponseDataConsumer() {

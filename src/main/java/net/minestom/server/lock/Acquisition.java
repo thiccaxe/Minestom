@@ -147,18 +147,21 @@ public final class Acquisition {
         ScheduledAcquisition scheduledAcquisition = SCHEDULED_ACQUISITION.get();
 
         final List<Acquirable<Object>> acquirableElements = scheduledAcquisition.acquirableElements;
-        final Map<Object, List<Consumer<Object>>> callbacks = scheduledAcquisition.callbacks;
 
-        acquireForEach(acquirableElements, element -> {
-            List<Consumer<Object>> consumers = callbacks.get(element);
-            if (consumers == null || consumers.isEmpty())
-                return;
-            consumers.forEach(objectConsumer -> objectConsumer.accept(element));
-        });
+        if (!acquirableElements.isEmpty()) {
+            final Map<Object, List<Consumer<Object>>> callbacks = scheduledAcquisition.callbacks;
 
-        // Clear collections..
-        acquirableElements.clear();
-        callbacks.clear();
+            acquireForEach(acquirableElements, element -> {
+                List<Consumer<Object>> consumers = callbacks.get(element);
+                if (consumers == null || consumers.isEmpty())
+                    return;
+                consumers.forEach(objectConsumer -> objectConsumer.accept(element));
+            });
+
+            // Clear collections..
+            acquirableElements.clear();
+            callbacks.clear();
+        }
     }
 
     /**
@@ -188,10 +191,9 @@ public final class Acquisition {
         }
 
         final List<Thread> acquiredThread = ACQUIRED_THREADS.get();
-        System.out.println("size " + acquiredThread.size());
+        System.out.println("size "+acquiredThread.size());
         if (acquiredThread.contains(elementThread)) {
             // This thread is already acquiring the element thread
-            System.out.println("ALERADY");
             return true;
         }
 
@@ -211,14 +213,14 @@ public final class Acquisition {
                 }
 
                 final BatchQueue periodQueue = elementThread.getQueue();
-                System.out.println("test " + elementThread + " " + currentThread);
                 synchronized (periodQueue) {
                     acquiredThread.add(elementThread);
+                    data.acquiredThreads = acquiredThread; // Shared to remove the element when the acquisition is done
+
                     periodQueue.setWaitingThread(elementThread);
                     periodQueue.getQueue().add(data);
                     periodQueue.wait();
                 }
-                acquiredThread.remove(elementThread);
 
                 if (monitoring) {
                     time = System.nanoTime() - time;
@@ -272,10 +274,16 @@ public final class Acquisition {
     public static final class AcquisitionData {
 
         private volatile Phaser phaser;
+        private volatile List<Thread> acquiredThreads;
 
         @Nullable
         public Phaser getPhaser() {
             return phaser;
+        }
+
+        @Nullable
+        public List<Thread> getAcquiredThreads() {
+            return acquiredThreads;
         }
     }
 
