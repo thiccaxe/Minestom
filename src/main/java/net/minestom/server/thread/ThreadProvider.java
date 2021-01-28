@@ -111,17 +111,12 @@ public abstract class ThreadProvider {
             this.lastBatchRefreshTime = time;
             this.batchHandlers.clear();
             update(time);
+        } else {
+            // Push the tasks
+            for (BatchSetupHandler batchHandler : batchHandlers) {
+                batchHandler.pushTask(threads, time);
+            }
         }
-
-        // Push the tasks
-        for (BatchSetupHandler batchHandler : batchHandlers) {
-            batchHandler.pushTask(threads, time);
-        }
-    }
-
-    @NotNull
-    public Set<BatchThread> getThreads() {
-        return threads;
     }
 
     @NotNull
@@ -134,8 +129,19 @@ public abstract class ThreadProvider {
         return countDownLatch;
     }
 
+    public void cleanup() {
+        for (BatchThread thread : threads) {
+            thread.setCost(0);
+        }
+    }
+
     public void shutdown() {
         this.threads.forEach(BatchThread::shutdown);
+    }
+
+    @NotNull
+    public Set<BatchThread> getThreads() {
+        return threads;
     }
 
     @Nullable

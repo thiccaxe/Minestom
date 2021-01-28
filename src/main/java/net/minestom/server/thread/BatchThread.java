@@ -29,6 +29,10 @@ public class BatchThread extends Thread {
         return cost;
     }
 
+    public void setCost(int cost) {
+        this.cost = cost;
+    }
+
     @NotNull
     public BatchRunnable getMainRunnable() {
         return runnable;
@@ -77,8 +81,6 @@ public class BatchThread extends Thread {
                     while ((runnable = queue.poll()) != null) {
                         runnable.run();
                     }
-
-                    batchThread.cost = 0;
 
                     // Execute waiting acquisition
                     {

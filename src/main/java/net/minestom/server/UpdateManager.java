@@ -130,6 +130,9 @@ public final class UpdateManager {
         } catch (InterruptedException e) {
             MinecraftServer.getExceptionManager().handleException(e);
         }
+
+        // Reset thread cost count
+        this.threadProvider.cleanup();
     }
 
     /**
