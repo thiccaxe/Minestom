@@ -191,7 +191,7 @@ public class PlayerInit {
 
             EntityZombie entityZombie = new EntityZombie(new Position(0, 41, 0));
             entityZombie.setInstance(player.getInstance());
-            entityZombie.setPathTo(player.getPosition());
+            entityZombie.getNavigator().setPathTo(player.getPosition());
         });
 
         globalEventHandler.addEventCallback(PlayerDisconnectEvent.class, event -> {
