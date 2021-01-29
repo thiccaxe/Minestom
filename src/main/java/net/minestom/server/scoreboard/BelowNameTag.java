@@ -6,7 +6,6 @@ import net.minestom.server.network.packet.server.play.ScoreboardObjectivePacket;
 import net.minestom.server.network.player.PlayerConnection;
 import org.jetbrains.annotations.NotNull;
 
-import java.util.Collections;
 import java.util.Set;
 import java.util.concurrent.CopyOnWriteArraySet;
 
@@ -21,7 +20,6 @@ public class BelowNameTag implements Scoreboard {
     public static final String BELOW_NAME_TAG_PREFIX = "bnt-";
 
     private final Set<Acquirable<Player>> viewers = new CopyOnWriteArraySet<>();
-    private final Set<Acquirable<Player>> unmodifiableViewers = Collections.unmodifiableSet(viewers);
     private final String objectiveName;
 
     private final ScoreboardObjectivePacket scoreboardObjectivePacket;
@@ -74,6 +72,6 @@ public class BelowNameTag implements Scoreboard {
     @NotNull
     @Override
     public Set<Acquirable<Player>> getViewers() {
-        return unmodifiableViewers;
+        return viewers;
     }
 }

@@ -21,7 +21,6 @@ public class TabList implements Scoreboard {
     private static final String TAB_LIST_PREFIX = "tl-";
 
     private final Set<Acquirable<Player>> viewers = new CopyOnWriteArraySet<>();
-    private final Set<Acquirable<Player>> unmodifiableViewers = Collections.unmodifiableSet(viewers);
     private final String objectiveName;
 
     private ScoreboardObjectivePacket.Type type;
@@ -78,7 +77,7 @@ public class TabList implements Scoreboard {
     @NotNull
     @Override
     public Set<Acquirable<Player>> getViewers() {
-        return unmodifiableViewers;
+        return viewers;
     }
 
     @Override

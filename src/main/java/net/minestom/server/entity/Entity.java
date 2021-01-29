@@ -106,7 +106,6 @@ public abstract class Entity implements Tickable, Viewable, LockedElement, Event
     private boolean autoViewable;
     private final int id;
     protected final Set<Acquirable<Player>> viewers = new CopyOnWriteArraySet<>();
-    private final Set<Acquirable<Player>> unmodifiableViewers = Collections.unmodifiableSet(viewers);
     private Data data;
     private final Set<Permission> permissions = new CopyOnWriteArraySet<>();
 
@@ -362,7 +361,7 @@ public abstract class Entity implements Tickable, Viewable, LockedElement, Event
     @NotNull
     @Override
     public Set<Acquirable<Player>> getViewers() {
-        return unmodifiableViewers;
+        return Collections.unmodifiableSet(viewers);
     }
 
     @Override
