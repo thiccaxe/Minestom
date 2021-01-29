@@ -237,7 +237,7 @@ public final class Acquisition {
         ScheduledAcquisition scheduledAcquisition = SCHEDULED_ACQUISITION.get();
         scheduledAcquisition.acquirableElements.add((Acquirable<Object>) acquirable);
         scheduledAcquisition.callbacks
-                .computeIfAbsent(acquirable.unsafeUnwrap(), objectAcquirable -> new ArrayList<>())
+                .computeIfAbsent(acquirable.unwrap(), objectAcquirable -> new ArrayList<>())
                 .add((Consumer<Object>) consumer);
     }
 
@@ -247,7 +247,7 @@ public final class Acquisition {
         Map<BatchThread, List<E>> threadCacheMap = new HashMap<>();
 
         for (T element : collection) {
-            final E value = element.unsafeUnwrap();
+            final E value = element.unwrap();
             final BatchThread elementThread = element.getHandler().getBatchInfo().getBatchThread();
             if (currentThread == elementThread) {
                 // The element is managed in the current thread, consumer can be immediately called

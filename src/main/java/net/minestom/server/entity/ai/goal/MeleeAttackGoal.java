@@ -100,11 +100,11 @@ public class MeleeAttackGoal extends GoalSelector {
     private Entity getTarget() {
         Acquirable<Entity> acquirableEntity = entityCreature.getTarget();
         if (acquirableEntity != null) {
-            return acquirableEntity.unsafeUnwrap();
+            return acquirableEntity.unwrap();
         }
         acquirableEntity = findTarget();
         if (acquirableEntity != null) {
-            return acquirableEntity.unsafeUnwrap();
+            return acquirableEntity.unwrap();
         }
         return null;
     }

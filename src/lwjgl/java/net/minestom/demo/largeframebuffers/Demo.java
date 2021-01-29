@@ -105,7 +105,7 @@ public class Demo {
     }
 
     private static void sendPacket(MapDataPacket packet) {
-        MinecraftServer.getConnectionManager().getOnlinePlayers().forEach(p -> p.unsafeUnwrap().getPlayerConnection().sendPacket(packet));
+        MinecraftServer.getConnectionManager().getOnlinePlayers().forEach(p -> p.unwrap().getPlayerConnection().sendPacket(packet));
     }
 
     private static void directRendering(LargeDirectFramebuffer framebuffer) {

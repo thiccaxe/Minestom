@@ -36,7 +36,7 @@ public interface Acquirable<T> {
 
         final boolean sameThread = Acquisition.acquire(currentThread, elementThread, data);
 
-        final T unwrap = unsafeUnwrap();
+        final T unwrap = unwrap();
         if (sameThread) {
             consumer.accept(unwrap);
         } else {
@@ -71,7 +71,7 @@ public interface Acquirable<T> {
     }
 
     @NotNull
-    T unsafeUnwrap();
+    T unwrap();
 
     @NotNull
     Handler getHandler();

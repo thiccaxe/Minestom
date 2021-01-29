@@ -117,7 +117,7 @@ public class EntityFinder {
             final int minDistance = distance.getMinimum();
             final int maxDistance = distance.getMaximum();
             result = result.stream().filter(acquirableEntity -> {
-                final Entity entity = acquirableEntity.unsafeUnwrap();
+                final Entity entity = acquirableEntity.unwrap();
                 final int distance = (int) entity.getDistance(self);
                 return MathUtils.isBetween(distance, minDistance, maxDistance);
             }).collect(Collectors.toList());
@@ -126,7 +126,7 @@ public class EntityFinder {
         // Diff X/Y/Z
         if (dx != null || dy != null || dz != null) {
             result = result.stream().filter(acquirableEntity -> {
-                final Entity entity = acquirableEntity.unsafeUnwrap();
+                final Entity entity = acquirableEntity.unwrap();
                 final Position entityPosition = entity.getPosition();
                 if (dx != null && !MathUtils.isBetweenUnordered(
                         entityPosition.getX(),
@@ -150,7 +150,7 @@ public class EntityFinder {
         // Entity type
         if (!entityTypes.isEmpty()) {
             result = result.stream().filter(acquirableEntity -> {
-                final Entity entity = acquirableEntity.unsafeUnwrap();
+                final Entity entity = acquirableEntity.unwrap();
                 return filterToggleableMap(entity.getEntityType(), entityTypes);
             }).collect(Collectors.toList());
         }
@@ -158,7 +158,7 @@ public class EntityFinder {
         // GameMode
         if (!gameModes.isEmpty()) {
             result = result.stream().filter(acquirableEntity -> {
-                final Entity entity = acquirableEntity.unsafeUnwrap();
+                final Entity entity = acquirableEntity.unwrap();
                 if (!(entity instanceof Player))
                     return false;
                 return filterToggleableMap(((Player) entity).getGameMode(), gameModes);
@@ -170,7 +170,7 @@ public class EntityFinder {
             final int minLevel = level.getMinimum();
             final int maxLevel = level.getMaximum();
             result = result.stream().filter(acquirableEntity -> {
-                final Entity entity = acquirableEntity.unsafeUnwrap();
+                final Entity entity = acquirableEntity.unwrap();
                 if (!(entity instanceof Player))
                     return false;
 
@@ -183,7 +183,7 @@ public class EntityFinder {
         if (!names.isEmpty()) {
             // TODO entity name
             result = result.stream().filter(acquirableEntity -> {
-                final Entity entity = acquirableEntity.unsafeUnwrap();
+                final Entity entity = acquirableEntity.unwrap();
                 if (!(entity instanceof Player))
                     return false;
                 return filterToggleableMap(((Player) entity).getUsername(), names);
@@ -201,12 +201,12 @@ public class EntityFinder {
                                 // RANDOM is handled below
                                 return 1;
                             case FURTHEST:
-                                return startPosition.getDistance(ent1.unsafeUnwrap().getPosition()) >
-                                        startPosition.getDistance(ent2.unsafeUnwrap().getPosition()) ?
+                                return startPosition.getDistance(ent1.unwrap().getPosition()) >
+                                        startPosition.getDistance(ent2.unwrap().getPosition()) ?
                                         1 : 0;
                             case NEAREST:
-                                return startPosition.getDistance(ent1.unsafeUnwrap().getPosition()) <
-                                        startPosition.getDistance(ent2.unsafeUnwrap().getPosition()) ?
+                                return startPosition.getDistance(ent1.unwrap().getPosition()) <
+                                        startPosition.getDistance(ent2.unwrap().getPosition()) ?
                                         1 : 0;
                         }
                         return 1;
@@ -234,7 +234,7 @@ public class EntityFinder {
     public Player findFirstPlayer(@Nullable Instance instance, @Nullable Entity self) {
         List<Acquirable<? extends Entity>> entities = find(instance, self);
         for (Acquirable<? extends Entity> acquirableEntity : entities) {
-            final Entity entity = acquirableEntity.unsafeUnwrap();
+            final Entity entity = acquirableEntity.unwrap();
             if (entity instanceof Player) {
                 return (Player) entity;
             }
@@ -282,7 +282,7 @@ public class EntityFinder {
             Collection<Acquirable<Player>> instancePlayers = instance != null ?
                     instance.getPlayers() : MinecraftServer.getConnectionManager().getOnlinePlayers();
             for (Acquirable<Player> player : instancePlayers) {
-                final double distance = player.unsafeUnwrap().getPosition().getDistance(startPosition);
+                final double distance = player.unwrap().getPosition().getDistance(startPosition);
                 if (distance < closestDistance) {
                     entity = player;
                     closestDistance = distance;

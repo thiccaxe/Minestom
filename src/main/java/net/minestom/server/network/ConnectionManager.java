@@ -92,7 +92,7 @@ public final class ConnectionManager {
     }
 
     @NotNull
-    public Collection<Player> getUnsafeOnlinePlayers() {
+    public Collection<Player> getUnwrapOnlinePlayers() {
         return new AcquirableCollectionView<>(getOnlinePlayers());
     }
 
@@ -111,7 +111,7 @@ public final class ConnectionManager {
         String lowercase = username.toLowerCase();
         double currentDistance = 0;
         // Unsafe loop, ok because we are only comparing usernames
-        for (Player player : getUnsafeOnlinePlayers()) {
+        for (Player player : getUnwrapOnlinePlayers()) {
             final String unwrapUsername = player.getUsername().toLowerCase();
             final double distance = new JaroWinklerDistance().apply(lowercase, unwrapUsername);
             if (distance > currentDistance) {
@@ -133,7 +133,7 @@ public final class ConnectionManager {
     @Nullable
     public Acquirable<Player> getPlayer(@NotNull String username) {
         // Unsafe loop, ok because we are only comparing usernames
-        for (Player player : getUnsafeOnlinePlayers()) {
+        for (Player player : getUnwrapOnlinePlayers()) {
             if (player.getUsername().equalsIgnoreCase(username))
                 return player.getAcquiredElement();
         }
@@ -151,7 +151,7 @@ public final class ConnectionManager {
     @Nullable
     public Acquirable<Player> getPlayer(@NotNull UUID uuid) {
         // Unsafe loop, ok because we are only comparing UUIDs
-        for (Player player : getUnsafeOnlinePlayers()) {
+        for (Player player : getUnwrapOnlinePlayers()) {
             if (player.getUuid().equals(uuid))
                 return player.getAcquiredElement();
         }
@@ -198,7 +198,7 @@ public final class ConnectionManager {
         } else {
             recipients = new ArrayList<>();
             getOnlinePlayers().forEach(acquirablePlayer -> {
-                final Player player = acquirablePlayer.unsafeUnwrap();
+                final Player player = acquirablePlayer.unwrap();
                 final boolean result = condition.isValid(player);
                 if (result)
                     recipients.add(acquirablePlayer);
@@ -473,7 +473,7 @@ public final class ConnectionManager {
     public void shutdown() {
         DisconnectPacket disconnectPacket = new DisconnectPacket(getShutdownText());
         // Unsafe loop, ok because we are only sending a packet, which is a thread-safe operation
-        for (Player player : getUnsafeOnlinePlayers()) {
+        for (Player player : getUnwrapOnlinePlayers()) {
             final PlayerConnection playerConnection = player.getPlayerConnection();
             if (playerConnection instanceof NettyPlayerConnection) {
                 final NettyPlayerConnection nettyPlayerConnection = (NettyPlayerConnection) playerConnection;
@@ -505,7 +505,7 @@ public final class ConnectionManager {
 
         // Unsafe loop, shouldn't create any issue since missing a keep alive tick
         // does not affect the overall server playability
-        for (Player player : getUnsafeOnlinePlayers()) {
+        for (Player player : getUnwrapOnlinePlayers()) {
             final long lastKeepAlive = tickStart - player.getLastKeepAlive();
             if (lastKeepAlive > KEEP_ALIVE_DELAY && player.didAnswerKeepAlive()) {
                 final PlayerConnection playerConnection = player.getPlayerConnection();

@@ -1281,7 +1281,7 @@ public class Player extends LivingEntity implements CommandSender {
 
             // Show player again
             getViewers().forEach(acquirablePlayer ->
-                    showPlayer(acquirablePlayer.unsafeUnwrap().getPlayerConnection()));
+                    showPlayer(acquirablePlayer.unwrap().getPlayerConnection()));
         }
 
         getInventory().update();

@@ -914,7 +914,7 @@ public abstract class Entity implements Tickable, Viewable, LockedElement, Event
 
         if (entity.getVehicle() != null) {
             // Thread safe operation, allowing for unwrap
-            entity.getVehicle().unsafeUnwrap().removePassenger(entity);
+            entity.getVehicle().unwrap().removePassenger(entity);
         }
 
         this.passengers.add(entity.getAcquiredElement());
@@ -966,7 +966,7 @@ public abstract class Entity implements Tickable, Viewable, LockedElement, Event
         int[] passengers = new int[this.passengers.size()];
         int counter = 0;
         for (Acquirable<Entity> passenger : this.passengers) {
-            passengers[counter++] = passenger.unsafeUnwrap().getEntityId();
+            passengers[counter++] = passenger.unwrap().getEntityId();
         }
 
         passengersPacket.passengersId = passengers;
@@ -1136,7 +1136,7 @@ public abstract class Entity implements Tickable, Viewable, LockedElement, Event
 
         if (hasPassenger()) {
             for (Acquirable<Entity> passenger : getPassengers()) {
-                passenger.unsafeUnwrap().refreshPosition(x, y, z);
+                passenger.unwrap().refreshPosition(x, y, z);
             }
         }
 

@@ -10,6 +10,6 @@ public class AcquirableCollectionView<E extends LockedElement> extends Collectio
     public AcquirableCollectionView(@NotNull Collection<Acquirable<E>> collectionView) {
         super(collectionView,
                 LockedElement::getAcquiredElement,
-                Acquirable::unsafeUnwrap);
+                Acquirable::unwrap);
     }
 }

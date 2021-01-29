@@ -164,7 +164,7 @@ public abstract class EntityCreature extends LivingEntity implements NavigableEn
 
             Set<Acquirable<Player>> viewers = new HashSet<>(getViewers());
             removeViewers();
-            viewers.forEach(acquirablePlayer -> addViewer(acquirablePlayer.unsafeUnwrap()));
+            viewers.forEach(acquirablePlayer -> addViewer(acquirablePlayer.unwrap()));
         }
     }
 

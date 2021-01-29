@@ -21,7 +21,7 @@ public class AcquirableImpl<T> implements Acquirable<T> {
 
     @NotNull
     @Override
-    public T unsafeUnwrap() {
+    public T unwrap() {
         return value;
     }
 

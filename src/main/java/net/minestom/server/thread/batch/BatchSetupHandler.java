@@ -74,7 +74,7 @@ public class BatchSetupHandler implements BatchHandler {
     private Runnable createRunnable(long time) {
         return () -> {
             for (Acquirable<?> element : elements) {
-                final Object unwrapElement = element.unsafeUnwrap();
+                final Object unwrapElement = element.unwrap();
 
                 if (unwrapElement instanceof Tickable) {
                     ((Tickable) unwrapElement).tick(time);

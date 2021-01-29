@@ -31,7 +31,7 @@ public class FollowTargetGoal extends GoalSelector {
     @Override
     public boolean shouldStart() {
         return entityCreature.getTarget() != null &&
-                getDistance(entityCreature.getTarget().unsafeUnwrap().getPosition(), entityCreature.getPosition()) >= 2;
+                getDistance(entityCreature.getTarget().unwrap().getPosition(), entityCreature.getPosition()) >= 2;
     }
 
     @Override
@@ -42,7 +42,7 @@ public class FollowTargetGoal extends GoalSelector {
         final Acquirable<Entity> acquirableTarget = entityCreature.getTarget();
 
         if (acquirableTarget != null) {
-            final Entity target = acquirableTarget.unsafeUnwrap();
+            final Entity target = acquirableTarget.unwrap();
             Navigator navigator = entityCreature.getNavigator();
 
             lastTargetPos = target.getPosition().clone();
@@ -71,7 +71,7 @@ public class FollowTargetGoal extends GoalSelector {
             return;
         }
         final Position targetPos = entityCreature.getTarget() != null ?
-                entityCreature.getTarget().unsafeUnwrap().getPosition() : null;
+                entityCreature.getTarget().unwrap().getPosition() : null;
         if (targetPos != null && !targetPos.equals(lastTargetPos)) {
             lastUpdateTime = time;
             lastTargetPos.copy(lastTargetPos);
@@ -83,7 +83,7 @@ public class FollowTargetGoal extends GoalSelector {
     public boolean shouldEnd() {
         return forceEnd ||
                 entityCreature.getTarget() == null ||
-                getDistance(entityCreature.getTarget().unsafeUnwrap().getPosition(), entityCreature.getPosition()) < 2;
+                getDistance(entityCreature.getTarget().unwrap().getPosition(), entityCreature.getPosition()) < 2;
     }
 
     @Override

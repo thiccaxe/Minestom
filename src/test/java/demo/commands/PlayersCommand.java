@@ -24,11 +24,11 @@ public class PlayersCommand extends Command {
         final int limit = 15;
         if (playerCount <= limit) {
             for (final Acquirable<Player> player : players) {
-                sender.sendMessage(player.unsafeUnwrap().getUsername());
+                sender.sendMessage(player.unwrap().getUsername());
             }
         } else {
             for (final Acquirable<Player> player : players.stream().limit(limit).collect(Collectors.toList())) {
-                sender.sendMessage(player.unsafeUnwrap().getUsername());
+                sender.sendMessage(player.unwrap().getUsername());
             }
             sender.sendMessage("...");
         }

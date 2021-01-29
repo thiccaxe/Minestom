@@ -30,7 +30,7 @@ public class TeleportCommand extends Command {
         Acquirable<Player> acquirableTarget = MinecraftServer.getConnectionManager().getPlayer(playerName);
         if (acquirableTarget != null && sender.isPlayer()) {
             Player player = sender.asPlayer();
-            player.teleport(acquirableTarget.unsafeUnwrap().getPosition());
+            player.teleport(acquirableTarget.unwrap().getPosition());
         }
         sender.sendMessage("Teleported to player "+playerName);
     }

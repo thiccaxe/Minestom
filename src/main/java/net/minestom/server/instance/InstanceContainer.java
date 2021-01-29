@@ -1,8 +1,5 @@
 package net.minestom.server.instance;
 
-import it.unimi.dsi.fastutil.longs.Long2ObjectMap;
-import it.unimi.dsi.fastutil.longs.Long2ObjectMaps;
-import it.unimi.dsi.fastutil.longs.Long2ObjectOpenHashMap;
 import net.minestom.server.MinecraftServer;
 import net.minestom.server.data.Data;
 import net.minestom.server.data.SerializableData;
@@ -820,7 +817,7 @@ public class InstanceContainer extends Instance {
                 chunk.sendPacketToViewers(unloadChunkPacket);
 
                 for (Acquirable<Player> viewer : chunk.getViewers()) {
-                    chunk.removeViewer(viewer.unsafeUnwrap());
+                    chunk.removeViewer(viewer.unwrap());
                 }
 
                 callChunkUnloadEvent(chunkX, chunkZ);

@@ -31,6 +31,6 @@ public class EntitySelectorCommand extends Command {
         Instance instance = commandSender.asPlayer().getInstance();
         List<Acquirable<? extends Entity>> entities = arguments.getEntities("entities").find(instance, null);
         Acquirable<Entity> entity = (Acquirable<Entity>) entities.get(0);
-        System.out.println("test " + ((Player) entity.unsafeUnwrap()).getUsername());
+        System.out.println("test " + ((Player) entity.unwrap()).getUsername());
     }
 }

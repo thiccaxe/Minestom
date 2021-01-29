@@ -131,14 +131,14 @@ public class ExperienceOrb extends Entity {
 
         this.experienceCount = experienceCount;
 
-        viewers.forEach(acquirablePlayer -> addViewer(acquirablePlayer.unsafeUnwrap()));
+        viewers.forEach(acquirablePlayer -> addViewer(acquirablePlayer.unwrap()));
     }
 
     private static Player getClosestPlayer(Entity entity, float maxDistance) {
         Player closest = entity.getInstance()
                 .getPlayers()
                 .stream()
-                .map(Acquirable::unsafeUnwrap)
+                .map(Acquirable::unwrap)
                 .min(Comparator.comparingDouble(a -> a.getDistance(entity)))
                 .orElse(null);
         if (closest == null) return null;

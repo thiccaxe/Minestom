@@ -56,7 +56,7 @@ public final class PacketUtils {
 
         // Send packet to all players
         for (Acquirable<Player> acquirablePlayer : players) {
-            final Player player = acquirablePlayer.unsafeUnwrap();
+            final Player player = acquirablePlayer.unwrap();
             sendPacket(packet, framedPacket, player, playerValidator);
         }
     }

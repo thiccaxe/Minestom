@@ -61,7 +61,7 @@ public class GamemodeCommand extends Command {
         assert mode != null; // mode is not supposed to be null, because gamemodeName will be valid
         Optional<Player> target = player.getInstance().getPlayers()
                 .stream()
-                .map(Acquirable::unsafeUnwrap)
+                .map(Acquirable::unwrap)
                 .filter(p -> p.getUsername().equalsIgnoreCase(targetName))
                 .findFirst();
         if (target.isPresent()) {

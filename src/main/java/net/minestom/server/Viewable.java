@@ -33,7 +33,7 @@ public interface Viewable {
      * Removes all viewers.
      */
     default void removeViewers() {
-        getViewers().forEach(acquirablePlayer -> removeViewer(acquirablePlayer.unsafeUnwrap()));
+        getViewers().forEach(acquirablePlayer -> removeViewer(acquirablePlayer.unwrap()));
     }
 
     /**

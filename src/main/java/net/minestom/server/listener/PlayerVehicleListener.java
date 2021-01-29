@@ -24,7 +24,7 @@ public class PlayerVehicleListener {
         if (acquirableVehicle == null)
             return;
 
-        final Entity vehicle = acquirableVehicle.unsafeUnwrap();
+        final Entity vehicle = acquirableVehicle.unwrap();
 
         final Position newPosition = new Position((float) packet.x, (float) packet.y, (float) packet.z);
         vehicle.refreshPosition(newPosition);
@@ -48,7 +48,7 @@ public class PlayerVehicleListener {
         if (acquirableVehicle == null)
             return;
 
-        final Entity vehicle = acquirableVehicle.unsafeUnwrap();
+        final Entity vehicle = acquirableVehicle.unwrap();
 
         if (!(vehicle instanceof EntityBoat))
             return;

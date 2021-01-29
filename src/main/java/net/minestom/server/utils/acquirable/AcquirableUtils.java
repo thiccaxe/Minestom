@@ -19,7 +19,7 @@ public final class AcquirableUtils {
     public static <T> void forEachUnwrap(@NotNull Collection<Acquirable<T>> collection, @NotNull Consumer<T> action) {
         Objects.requireNonNull(action);
         for (Acquirable<T> t : collection) {
-            action.accept(t.unsafeUnwrap());
+            action.accept(t.unwrap());
         }
     }
 
