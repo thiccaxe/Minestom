@@ -234,7 +234,7 @@ public final class ConnectionManager {
      */
     @NotNull
     public List<ServerPacketConsumer> getSendPacketConsumers() {
-        return Collections.unmodifiableList(sendClientPacketConsumers);
+        return sendClientPacketConsumers;
     }
 
     /**

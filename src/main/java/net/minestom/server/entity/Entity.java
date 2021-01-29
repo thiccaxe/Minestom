@@ -85,8 +85,8 @@ public abstract class Entity implements Tickable, Viewable, LockedElement, Event
 
     protected Instance instance;
     protected final Position position;
-    protected float lastX, lastY, lastZ;
-    protected float cacheX, cacheY, cacheZ; // Used to synchronize with #getPosition
+    protected double lastX, lastY, lastZ;
+    protected double cacheX, cacheY, cacheZ; // Used to synchronize with #getPosition
     protected float lastYaw, lastPitch;
     protected float cacheYaw, cachePitch;
     protected boolean onGround;
@@ -98,9 +98,9 @@ public abstract class Entity implements Tickable, Viewable, LockedElement, Event
     // Velocity
     protected Vector velocity = new Vector(); // Movement in block per second
 
-    protected float gravityDragPerTick;
-    protected float gravityAcceleration;
-    protected float gravityTerminalVelocity;
+    protected double gravityDragPerTick;
+    protected double gravityAcceleration;
+    protected double gravityTerminalVelocity;
     protected int gravityTickCount; // Number of tick where gravity tick was applied
 
     private boolean autoViewable;
@@ -158,6 +158,9 @@ public abstract class Entity implements Tickable, Viewable, LockedElement, Event
         this.entityType = entityType;
         this.uuid = uuid;
         this.position = spawnPosition.clone();
+        this.lastX = spawnPosition.getX();
+        this.lastY = spawnPosition.getY();
+        this.lastZ = spawnPosition.getZ();
 
         setBoundingBox(0, 0, 0);
 
@@ -251,9 +254,11 @@ public abstract class Entity implements Tickable, Viewable, LockedElement, Event
     public void teleport(@NotNull Position position, @Nullable long[] chunks, @Nullable Runnable callback) {
         Check.stateCondition(instance == null, "You need to use Entity#setInstance before teleporting an entity!");
 
+        final Position teleportPosition = position.clone(); // Prevent synchronization issue
+
         final ChunkCallback endCallback = (chunk) -> {
-            refreshPosition(position.getX(), position.getY(), position.getZ());
-            refreshView(position.getYaw(), position.getPitch());
+            refreshPosition(teleportPosition);
+            refreshView(teleportPosition.getYaw(), teleportPosition.getPitch());
 
             sendSynchronization();
 
@@ -261,7 +266,7 @@ public abstract class Entity implements Tickable, Viewable, LockedElement, Event
         };
 
         if (chunks == null || chunks.length == 0) {
-            instance.loadOptionalChunk(position, endCallback);
+            instance.loadOptionalChunk(teleportPosition, endCallback);
         } else {
             ChunkUtils.optionalLoadAll(instance, chunks, null, endCallback);
         }
@@ -421,6 +426,8 @@ public abstract class Entity implements Tickable, Viewable, LockedElement, Event
         // Acquisition
         getAcquiredElement().getHandler().acquisitionTick();
 
+        final boolean isNettyClient = PlayerUtils.isNettyClient(this);
+
         // Synchronization with updated fields in #getPosition()
         {
             final boolean positionChange = cacheX != position.getX() ||
@@ -428,9 +435,9 @@ public abstract class Entity implements Tickable, Viewable, LockedElement, Event
                     cacheZ != position.getZ();
             final boolean viewChange = cacheYaw != position.getYaw() ||
                     cachePitch != position.getPitch();
-            final float distance = positionChange ? position.getDistance(cacheX, cacheY, cacheZ) : 0;
+            final double distance = positionChange ? position.getDistance(cacheX, cacheY, cacheZ) : 0;
 
-            if (distance >= 8 || (positionChange && PlayerUtils.isNettyClient(this))) {
+            if (distance >= 8 || (positionChange && isNettyClient)) {
                 // Teleport has the priority over everything else
                 teleport(position);
             } else if (positionChange && viewChange) {
@@ -477,23 +484,23 @@ public abstract class Entity implements Tickable, Viewable, LockedElement, Event
             // Velocity
             boolean applyVelocity;
             // Non-player entities with either velocity or gravity enabled
-            applyVelocity = !PlayerUtils.isNettyClient(this) && (hasVelocity() || !hasNoGravity());
+            applyVelocity = !isNettyClient && (hasVelocity() || !hasNoGravity());
             // Players with a velocity applied (client is responsible for gravity)
-            applyVelocity |= PlayerUtils.isNettyClient(this) && hasVelocity();
+            applyVelocity |= isNettyClient && hasVelocity();
 
             if (applyVelocity) {
                 final float tps = MinecraftServer.TICK_PER_SECOND;
-                final float newX = position.getX() + velocity.getX() / tps;
-                final float newY = position.getY() + velocity.getY() / tps;
-                final float newZ = position.getZ() + velocity.getZ() / tps;
+                final double newX = position.getX() + velocity.getX() / tps;
+                final double newY = position.getY() + velocity.getY() / tps;
+                final double newZ = position.getZ() + velocity.getZ() / tps;
                 Position newPosition = new Position(newX, newY, newZ);
 
                 Vector newVelocityOut = new Vector();
 
                 // Gravity force
-                final float gravityY = !noGravity ? Math.min(
-                        gravityDragPerTick + (gravityAcceleration * (float) gravityTickCount),
-                        gravityTerminalVelocity) : 0f;
+                final double gravityY = !noGravity ? Math.min(
+                        gravityDragPerTick + (gravityAcceleration * (double) gravityTickCount),
+                        gravityTerminalVelocity) : 0;
 
                 final Vector deltaPos = new Vector(
                         getVelocity().getX() / tps,
@@ -519,7 +526,7 @@ public abstract class Entity implements Tickable, Viewable, LockedElement, Event
 
 
                 // Update velocity
-                {
+                if (hasVelocity() || !newVelocityOut.isZero()) {
                     this.velocity.copy(newVelocityOut);
                     this.velocity.multiply(tps);
 
@@ -539,7 +546,7 @@ public abstract class Entity implements Tickable, Viewable, LockedElement, Event
                         }
 
                         // Stop player velocity
-                        if (PlayerUtils.isNettyClient(this)) {
+                        if (isNettyClient) {
                             this.velocity.zero();
                         }
                     } else {
@@ -548,13 +555,19 @@ public abstract class Entity implements Tickable, Viewable, LockedElement, Event
 
                     this.velocity.setX(velocity.getX() * drag);
                     this.velocity.setZ(velocity.getZ() * drag);
+
+                    if (velocity.equals(new Vector())) {
+                        this.velocity.zero();
+                    }
                 }
 
                 // Synchronization and packets...
-                sendSynchronization();
+                if (!isNettyClient) {
+                    sendSynchronization();
+                }
                 // Verify if velocity packet has to be sent
-                if (hasVelocity() || gravityTickCount > 0) {
-                    sendPacketsToViewers(getVelocityPacket());
+                if (hasVelocity() || (!isNettyClient && gravityTickCount > 0)) {
+                    sendPacketToViewersAndSelf(getVelocityPacket());
                 }
             }
 
@@ -728,7 +741,7 @@ public abstract class Entity implements Tickable, Viewable, LockedElement, Event
      * @param y the bounding box Y size
      * @param z the bounding box Z size
      */
-    public void setBoundingBox(float x, float y, float z) {
+    public void setBoundingBox(double x, double y, double z) {
         this.boundingBox = new BoundingBox(this, x, y, z);
     }
 
@@ -817,9 +830,7 @@ public abstract class Entity implements Tickable, Viewable, LockedElement, Event
      * @return true if velocity is not set to 0
      */
     public boolean hasVelocity() {
-        return velocity.getX() != 0 ||
-                velocity.getY() != 0 ||
-                velocity.getZ() != 0;
+        return !velocity.isZero();
     }
 
     /**
@@ -827,7 +838,7 @@ public abstract class Entity implements Tickable, Viewable, LockedElement, Event
      *
      * @return the gravity drag per tick in block
      */
-    public float getGravityDragPerTick() {
+    public double getGravityDragPerTick() {
         return gravityDragPerTick;
     }
 
@@ -836,7 +847,7 @@ public abstract class Entity implements Tickable, Viewable, LockedElement, Event
      *
      * @return the gravity acceleration in block
      */
-    public float getGravityAcceleration() {
+    public double getGravityAcceleration() {
         return gravityAcceleration;
     }
 
@@ -845,7 +856,7 @@ public abstract class Entity implements Tickable, Viewable, LockedElement, Event
      *
      * @return the maximum gravity velocity in block
      */
-    public float getGravityTerminalVelocity() {
+    public double getGravityTerminalVelocity() {
         return gravityTerminalVelocity;
     }
 
@@ -866,7 +877,7 @@ public abstract class Entity implements Tickable, Viewable, LockedElement, Event
      * @param gravityTerminalVelocity the gravity terminal velocity (maximum) in block
      * @see <a href="https://minecraft.gamepedia.com/Entity#Motion_of_entities">Entities motion</a>
      */
-    public void setGravity(float gravityDragPerTick, float gravityAcceleration, float gravityTerminalVelocity) {
+    public void setGravity(double gravityDragPerTick, double gravityAcceleration, double gravityTerminalVelocity) {
         this.gravityDragPerTick = gravityDragPerTick;
         this.gravityAcceleration = gravityAcceleration;
         this.gravityTerminalVelocity = gravityTerminalVelocity;
@@ -878,7 +889,7 @@ public abstract class Entity implements Tickable, Viewable, LockedElement, Event
      * @param entity the entity to get the distance from
      * @return the distance between this and {@code entity}
      */
-    public float getDistance(@NotNull Entity entity) {
+    public double getDistance(@NotNull Entity entity) {
         return getPosition().getDistance(entity.getPosition());
     }
 
@@ -1116,10 +1127,7 @@ public abstract class Entity implements Tickable, Viewable, LockedElement, Event
      * @param y new position Y
      * @param z new position Z
      */
-    public void refreshPosition(float x, float y, float z) {
-        this.lastX = position.getX();
-        this.lastY = position.getY();
-        this.lastZ = position.getZ();
+    public void refreshPosition(double x, double y, double z) {
         position.setX(x);
         position.setY(y);
         position.setZ(z);
@@ -1156,11 +1164,15 @@ public abstract class Entity implements Tickable, Viewable, LockedElement, Event
                 }
             }
         }
+
+        this.lastX = position.getX();
+        this.lastY = position.getY();
+        this.lastZ = position.getZ();
     }
 
     /**
      * @param position the new position
-     * @see #refreshPosition(float, float, float)
+     * @see #refreshPosition(double, double, double)
      */
     public void refreshPosition(@NotNull Position position) {
         refreshPosition(position.getX(), position.getY(), position.getZ());
@@ -1250,8 +1262,8 @@ public abstract class Entity implements Tickable, Viewable, LockedElement, Event
      *
      * @return the entity eye height
      */
-    public float getEyeHeight() {
-        return boundingBox.getHeight() * 0.85f;
+    public double getEyeHeight() {
+        return boundingBox.getHeight() * 0.85;
     }
 
     /**
@@ -1499,7 +1511,7 @@ public abstract class Entity implements Tickable, Viewable, LockedElement, Event
     protected void sendSynchronization() {
         EntityTeleportPacket entityTeleportPacket = new EntityTeleportPacket();
         entityTeleportPacket.entityId = getEntityId();
-        entityTeleportPacket.position = getPosition();
+        entityTeleportPacket.position = getPosition().clone();
         entityTeleportPacket.onGround = isOnGround();
         sendPacketToViewers(entityTeleportPacket);
     }

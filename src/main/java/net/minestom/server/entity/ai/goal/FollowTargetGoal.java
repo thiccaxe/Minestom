@@ -4,6 +4,7 @@ import net.minestom.server.entity.Entity;
 import net.minestom.server.entity.EntityCreature;
 import net.minestom.server.entity.ai.GoalSelector;
 import net.minestom.server.lock.Acquirable;
+import net.minestom.server.entity.pathfinding.Navigator;
 import net.minestom.server.utils.MathUtils;
 import net.minestom.server.utils.Position;
 import net.minestom.server.utils.time.UpdateOption;
@@ -42,21 +43,24 @@ public class FollowTargetGoal extends GoalSelector {
 
         if (acquirableTarget != null) {
             final Entity target = acquirableTarget.unsafeUnwrap();
+            Navigator navigator = entityCreature.getNavigator();
 
             lastTargetPos = target.getPosition().clone();
             if (getDistance(lastTargetPos, entityCreature.getPosition()) < 2) {
                 forceEnd = true;
-                entityCreature.setPathTo(null);
+                navigator.setPathTo(null);
                 return;
             }
 
-            if (entityCreature.getPathPosition() == null ||
-                    (!entityCreature.getPathPosition().isSimilar(lastTargetPos))) {
-                entityCreature.setPathTo(lastTargetPos);
-            } else
+            if (navigator.getPathPosition() == null ||
+                    (!navigator.getPathPosition().isSimilar(lastTargetPos))) {
+                navigator.setPathTo(lastTargetPos);
+            } else {
                 forceEnd = true;
-        } else
+            }
+        } else {
             forceEnd = true;
+        }
     }
 
     @Override
@@ -71,7 +75,7 @@ public class FollowTargetGoal extends GoalSelector {
         if (targetPos != null && !targetPos.equals(lastTargetPos)) {
             lastUpdateTime = time;
             lastTargetPos.copy(lastTargetPos);
-            entityCreature.setPathTo(targetPos);
+            entityCreature.getNavigator().setPathTo(targetPos);
         }
     }
 
@@ -84,10 +88,10 @@ public class FollowTargetGoal extends GoalSelector {
 
     @Override
     public void end() {
-        entityCreature.setPathTo(null);
+        entityCreature.getNavigator().setPathTo(null);
     }
 
-    private float getDistance(@NotNull Position a, @NotNull Position b) {
+    private double getDistance(@NotNull Position a, @NotNull Position b) {
         return MathUtils.square(a.getX() - b.getX()) +
                 MathUtils.square(a.getZ() - b.getZ());
     }

@@ -277,12 +277,12 @@ public class EntityFinder {
 
         if (targetSelector == TargetSelector.NEAREST_PLAYER) {
             Acquirable<Player> entity = null;
-            float closestDistance = Float.MAX_VALUE;
+            double closestDistance = Double.MAX_VALUE;
 
             Collection<Acquirable<Player>> instancePlayers = instance != null ?
                     instance.getPlayers() : MinecraftServer.getConnectionManager().getOnlinePlayers();
             for (Acquirable<Player> player : instancePlayers) {
-                final float distance = player.unsafeUnwrap().getPosition().getDistance(startPosition);
+                final double distance = player.unsafeUnwrap().getPosition().getDistance(startPosition);
                 if (distance < closestDistance) {
                     entity = player;
                     closestDistance = distance;

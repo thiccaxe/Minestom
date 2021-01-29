@@ -8,6 +8,7 @@ import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
 import java.util.Collections;
+import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.CopyOnWriteArraySet;
@@ -151,6 +152,21 @@ public final class InstanceManager {
     @NotNull
     public Set<Instance> getInstances() {
         return Collections.unmodifiableSet(instances);
+    }
+
+    /**
+     * Gets an instance by the given UUID.
+     *
+     * @param uuid UUID of the instance
+     * @return the instance with the given UUID, null if not found
+     */
+    @Nullable
+    public Instance getInstance(@NotNull UUID uuid) {
+        Optional<Instance> instance = getInstances()
+                .stream()
+                .filter(someInstance -> someInstance.getUniqueId().equals(uuid))
+                .findFirst();
+        return instance.orElse(null);
     }
 
     /**

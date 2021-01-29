@@ -28,7 +28,6 @@ import net.minestom.server.utils.block.BlockIterator;
 import net.minestom.server.utils.time.CooldownUtils;
 import net.minestom.server.utils.time.TimeUnit;
 import net.minestom.server.utils.time.UpdateOption;
-import net.minestom.server.utils.validate.Check;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
@@ -452,7 +451,7 @@ public abstract class LivingEntity extends Entity implements EquipmentHandler {
     }
 
     @Override
-    public void setBoundingBox(float x, float y, float z) {
+    public void setBoundingBox(double x, double y, double z) {
         super.setBoundingBox(x, y, z);
         this.expandedBoundingBox = getBoundingBox().expand(1, 0.5f, 1);
     }

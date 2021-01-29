@@ -780,6 +780,8 @@ public final class MinecraftServer {
         }
 
         LOGGER.info("Minestom server started successfully.");
+
+        commandManager.startConsoleThread();
     }
 
     /**

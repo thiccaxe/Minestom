@@ -12,6 +12,8 @@ import org.jetbrains.annotations.Nullable;
 import java.util.HashSet;
 import java.util.Set;
 
+import java.util.Comparator;
+
 public class ExperienceOrb extends Entity {
 
     private short experienceCount;
@@ -137,7 +139,7 @@ public class ExperienceOrb extends Entity {
                 .getPlayers()
                 .stream()
                 .map(Acquirable::unsafeUnwrap)
-                .min((a, b) -> Float.compare(a.getDistance(entity), b.getDistance(entity)))
+                .min(Comparator.comparingDouble(a -> a.getDistance(entity)))
                 .orElse(null);
         if (closest == null) return null;
         if (closest.getDistance(entity) > maxDistance) return null;

@@ -13,7 +13,7 @@ import org.jetbrains.annotations.NotNull;
 
 public class PFPathingEntity implements IPathingEntity {
 
-    private final NavigableEntity navigableEntity;
+    private final Navigator navigator;
     private final Entity entity;
 
     private float searchRange;
@@ -30,9 +30,9 @@ public class PFPathingEntity implements IPathingEntity {
     private boolean avoidsDoorways;
     private boolean opensDoors;
 
-    public PFPathingEntity(NavigableEntity navigableEntity) {
-        this.navigableEntity = navigableEntity;
-        this.entity = navigableEntity.getNavigableEntity();
+    public PFPathingEntity(Navigator navigator) {
+        this.navigator = navigator;
+        this.entity = navigator.getEntity();
 
         this.searchRange = getAttributeValue(Attributes.FOLLOW_RANGE);
     }
@@ -189,14 +189,11 @@ public class PFPathingEntity implements IPathingEntity {
 
     @Override
     public void moveTo(Vec3d position, Passibility passibility, Gravitation gravitation) {
-        final float x = (float) position.x;
-        final float y = (float) position.y;
-        final float z = (float) position.z;
-        this.targetPosition = new Position(x, y, z);
+        this.targetPosition = new Position(position.x, position.y, position.z);
 
-        final float entityY = entity.getPosition().getY();
-        if (entityY < y) {
-            navigableEntity.jump(1);
+        final double entityY = entity.getPosition().getY();
+        if (entityY < targetPosition.getY()) {
+            this.navigator.jump(1);
         }
     }
 
@@ -208,12 +205,12 @@ public class PFPathingEntity implements IPathingEntity {
 
     @Override
     public float width() {
-        return entity.getBoundingBox().getWidth();
+        return (float) entity.getBoundingBox().getWidth();
     }
 
     @Override
     public float height() {
-        return entity.getBoundingBox().getHeight();
+        return (float) entity.getBoundingBox().getHeight();
     }
 
     private float getAttributeValue(@NotNull Attribute attribute) {

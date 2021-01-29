@@ -611,6 +611,28 @@ public abstract class Instance implements BlockModifier, Tickable, LockedElement
     }
 
     /**
+     * Gets block from given position.
+     *
+     * @param position position to get from
+     * @return Block at given position.
+     */
+    public Block getBlock(BlockPosition position) {
+        return getBlock(position.getX(), position.getY(), position.getZ());
+    }
+
+    /**
+     * Gets Block type from given coordinates.
+     *
+     * @param x x coordinate
+     * @param y y coordinate
+     * @param z z coordinate
+     * @return Block at given position.
+     */
+    public Block getBlock(int x, int y, int z) {
+        return Block.fromStateId(getBlockStateId(x, y, z));
+    }
+
+    /**
      * Gives the block state id at the given position.
      *
      * @param x the X position
@@ -634,8 +656,8 @@ public abstract class Instance implements BlockModifier, Tickable, LockedElement
      * @param z the Z position
      * @return the block state id at the position
      */
-    public short getBlockStateId(float x, float y, float z) {
-        return getBlockStateId(Math.round(x), Math.round(y), Math.round(z));
+    public short getBlockStateId(double x, double y, double z) {
+        return getBlockStateId((int) Math.round(x), (int) Math.round(y), (int) Math.round(z));
     }
 
     /**
@@ -762,7 +784,7 @@ public abstract class Instance implements BlockModifier, Tickable, LockedElement
      * @return the chunk at the given position, null if not loaded
      */
     @Nullable
-    public Chunk getChunkAt(float x, float z) {
+    public Chunk getChunkAt(double x, double z) {
         final int chunkX = ChunkUtils.getChunkCoordinate((int) Math.floor(x));
         final int chunkZ = ChunkUtils.getChunkCoordinate((int) Math.floor(z));
         return getChunk(chunkX, chunkZ);
