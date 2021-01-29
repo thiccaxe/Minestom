@@ -3,6 +3,7 @@ package net.minestom.server.lock;
 import net.minestom.server.MinecraftServer;
 import net.minestom.server.thread.BatchQueue;
 import net.minestom.server.thread.BatchThread;
+import net.minestom.server.thread.batch.BatchInfo;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
@@ -248,7 +249,9 @@ public final class Acquisition {
 
         for (T element : collection) {
             final E value = element.unwrap();
-            final BatchThread elementThread = element.getHandler().getBatchInfo().getBatchThread();
+
+            final BatchInfo batchInfo = element.getHandler().getBatchInfo();
+            final BatchThread elementThread = batchInfo != null ? batchInfo.getBatchThread() : null;
             if (currentThread == elementThread) {
                 // The element is managed in the current thread, consumer can be immediately called
                 consumer.accept(value);
