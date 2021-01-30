@@ -1,6 +1,16 @@
 package net.minestom.server.instance;
 
-import it.unimi.dsi.fastutil.ints.IntSet;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collections;
+import java.util.List;
+import java.util.Set;
+import java.util.UUID;
+import java.util.concurrent.CopyOnWriteArraySet;
+
+import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
+
 import net.minestom.server.MinecraftServer;
 import net.minestom.server.Viewable;
 import net.minestom.server.data.Data;
@@ -18,7 +28,6 @@ import net.minestom.server.instance.block.CustomBlock;
 import net.minestom.server.network.packet.server.play.ChunkDataPacket;
 import net.minestom.server.network.packet.server.play.UpdateLightPacket;
 import net.minestom.server.network.player.PlayerConnection;
-import net.minestom.server.utils.BlockPosition;
 import net.minestom.server.utils.MathUtils;
 import net.minestom.server.utils.PacketUtils;
 import net.minestom.server.utils.Position;
@@ -30,11 +39,6 @@ import net.minestom.server.utils.player.PlayerUtils;
 import net.minestom.server.utils.validate.Check;
 import net.minestom.server.world.biomes.Biome;
 import net.minestom.server.world.biomes.BiomeManager;
-import org.jetbrains.annotations.NotNull;
-import org.jetbrains.annotations.Nullable;
-
-import java.util.*;
-import java.util.concurrent.CopyOnWriteArraySet;
 
 // TODO light data & API
 
@@ -75,6 +79,7 @@ public abstract class Chunk implements Viewable, DataContainer {
     // Options
     private final boolean shouldGenerate;
     private boolean readOnly;
+    private boolean isPopulated;
 
     protected volatile boolean loaded = true;
     protected final Set<Player> viewers = new CopyOnWriteArraySet<>();
@@ -342,6 +347,63 @@ public abstract class Chunk implements Viewable, DataContainer {
     public boolean shouldGenerate() {
         return shouldGenerate;
     }
+    
+    /**
+     * Gets if this chunk should be populated
+     * <p>
+     * This returns true if the chunk is not populated and the surrounding eight chunks are generated. 
+     *
+     * @return true if this chunk should be populated
+     */
+    public boolean shouldPopulate(Instance instance) {
+    	// Check if chunk is already populated
+    	if (isPopulated) {return false;}
+    	
+    	
+    	// Check if surrounding chunks are generated
+    	int x = this.getChunkX();
+    	int z = this.getChunkZ();
+    	
+    	if (instance.getChunk(x + 1, z + 1) == null) {return false;}
+    	if (instance.getChunk(x + 0, z + 1) == null) {return false;}
+    	if (instance.getChunk(x - 1, z + 1) == null) {return false;}
+    	if (instance.getChunk(x + 1, z + 0) == null) {return false;}
+    	if (instance.getChunk(x - 1, z + 0) == null) {return false;}
+    	if (instance.getChunk(x + 1, z - 1) == null) {return false;}
+    	if (instance.getChunk(x + 0, z - 1) == null) {return false;}
+    	if (instance.getChunk(x - 1, z - 1) == null) {return false;}
+    	
+        return true;
+    }
+    
+    /**
+     * Get the surrounding chunks that need to be populated
+     * <p>
+     * This returns a list of the chunks that need to be populated
+     *
+     * @return list list of all chunks to be populated
+     */
+    public List<Chunk> getPopulatingChunks(Instance instance) {
+    	List<Chunk> chunks = new ArrayList<Chunk>();
+    	
+    	// TODO: Optimize by caching the surrounding 25 chunks in a boolean mask
+    	
+    	// Check if surrounding chunks should be populated
+    	int x = this.getChunkX();
+    	int z = this.getChunkZ();
+    	
+    	if (instance.getChunk(x + 1, z + 1).shouldPopulate(instance)) {chunks.add(instance.getChunk(x + 1, z + 1));}
+    	if (instance.getChunk(x + 0, z + 1).shouldPopulate(instance)) {chunks.add(instance.getChunk(x + 0, z + 1));}
+    	if (instance.getChunk(x - 1, z + 1).shouldPopulate(instance)) {chunks.add(instance.getChunk(x - 1, z + 1));}
+    	if (instance.getChunk(x + 1, z + 0).shouldPopulate(instance)) {chunks.add(instance.getChunk(x + 1, z + 0));}
+    	if (instance.getChunk(x + 0, z + 0).shouldPopulate(instance)) {chunks.add(instance.getChunk(x + 0, z + 0));}
+    	if (instance.getChunk(x - 1, z + 0).shouldPopulate(instance)) {chunks.add(instance.getChunk(x - 1, z + 0));}
+    	if (instance.getChunk(x + 1, z - 1).shouldPopulate(instance)) {chunks.add(instance.getChunk(x + 1, z - 1));}
+    	if (instance.getChunk(x + 0, z - 1).shouldPopulate(instance)) {chunks.add(instance.getChunk(x + 0, z - 1));}
+    	if (instance.getChunk(x - 1, z - 1).shouldPopulate(instance)) {chunks.add(instance.getChunk(x - 1, z - 1));}
+    	
+        return chunks;
+    }
 
     /**
      * Gets if this chunk is read-only.
@@ -365,6 +427,28 @@ public abstract class Chunk implements Viewable, DataContainer {
      */
     public void setReadOnly(boolean readOnly) {
         this.readOnly = readOnly;
+    }
+    
+    /**
+     * Gets if this chunk has been populated.
+     * <p>
+     * Being populated means that the populators for this chunk have ran.
+     *
+     * @return true if the chunk has been populated
+     */
+    public boolean isPopulated() {
+        return isPopulated;
+    }
+    
+    /**
+     * Flags the chunk as populated or non-populated.
+     * <p>
+     * Being populated means that the populators for this chunk have ran.
+     * 
+     * @param isPopulated true to mark the chunk as populated, false otherwise
+     */
+    public void setPopulated(boolean isPopulated) {
+        this.isPopulated = isPopulated;
     }
 
     /**

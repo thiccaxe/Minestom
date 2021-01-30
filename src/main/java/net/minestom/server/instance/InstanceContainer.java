@@ -546,10 +546,30 @@ public class InstanceContainer extends Instance {
         cacheChunk(chunk);
 
         if (chunkGenerator != null && chunk.shouldGenerate()) {
-            // Execute the chunk generator to populate the chunk
+            // Execute the chunk generator to generate the chunk
             final ChunkBatch chunkBatch = new ChunkBatch(this, chunk, true);
 
             chunkBatch.flushChunkGenerator(chunkGenerator, callback);
+            
+            // Schedule to check if surrounding chunks need to be populated
+            // TODO: Offload to async thread
+            this.scheduleNextTick((instance) -> {
+            	List<Chunk> chunks = instance.getChunk(chunkX, chunkZ).getPopulatingChunks(instance);
+            	
+            	// Iterate over chunks
+            	for (Chunk populatingChunk : chunks) {
+            		// Create new chunk batch
+            		final ChunkBatch populatorBatch = new ChunkBatch((InstanceContainer) instance, chunk, true);
+            		
+            		// For each populator, execute with chunk batch
+            		for (ChunkPopulator populator : instance.getChunkGenerator().getPopulators()) {
+            			populator.populateChunk(populatorBatch, populatingChunk);
+            		}
+            		// Flush batch
+            		populatorBatch.flush(null);
+            	}
+            });
+            
         } else {
             // No chunk generator, execute the callback with the empty chunk
             OptionalCallback.execute(callback, chunk);

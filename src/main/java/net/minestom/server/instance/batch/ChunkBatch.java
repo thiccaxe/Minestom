@@ -1,21 +1,23 @@
 package net.minestom.server.instance.batch;
 
+import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
+
 import it.unimi.dsi.fastutil.ints.Int2ObjectMap;
 import it.unimi.dsi.fastutil.ints.Int2ObjectOpenHashMap;
 import it.unimi.dsi.fastutil.longs.LongArrayList;
 import it.unimi.dsi.fastutil.longs.LongList;
 import net.minestom.server.data.Data;
-import net.minestom.server.instance.*;
+import net.minestom.server.instance.Chunk;
+import net.minestom.server.instance.ChunkGenerator;
+import net.minestom.server.instance.Instance;
+import net.minestom.server.instance.InstanceContainer;
 import net.minestom.server.instance.block.CustomBlock;
 import net.minestom.server.utils.block.CustomBlockUtils;
 import net.minestom.server.utils.callback.OptionalCallback;
 import net.minestom.server.utils.chunk.ChunkCallback;
 import net.minestom.server.utils.chunk.ChunkUtils;
 import net.minestom.server.utils.validate.Check;
-import org.jetbrains.annotations.NotNull;
-import org.jetbrains.annotations.Nullable;
-
-import java.util.List;
 
 /**
  * Used when all the blocks you want to place can be contained within only one {@link Chunk},
@@ -125,20 +127,11 @@ public class ChunkBatch implements InstanceBatch {
     public void flushChunkGenerator(@NotNull ChunkGenerator chunkGenerator, @Nullable ChunkCallback callback) {
         BLOCK_BATCH_POOL.execute(() -> {
             synchronized (chunk) {
-                final List<ChunkPopulator> populators = chunkGenerator.getPopulators();
-                final boolean hasPopulator = populators != null && !populators.isEmpty();
-
                 if (batchOption.isFullChunk()) {
                     this.chunk.reset();
                 }
 
                 chunkGenerator.generateChunkData(this, chunk.getChunkX(), chunk.getChunkZ());
-
-                if (hasPopulator) {
-                    for (ChunkPopulator chunkPopulator : populators) {
-                        chunkPopulator.populateChunk(this, chunk);
-                    }
-                }
 
                 updateChunk(callback, true);
             }
