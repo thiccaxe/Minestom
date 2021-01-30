@@ -565,8 +565,6 @@ public class InstanceContainer extends Instance {
             		for (ChunkPopulator populator : instance.getChunkGenerator().getPopulators()) {
             			populator.populateChunk(populatorBatch, populatingChunk);
             		}
-            		// Flush batch
-            		populatorBatch.flush(null);
             	}
             });
             
