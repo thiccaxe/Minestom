@@ -25,8 +25,9 @@ public interface Acquirable<T> {
      * and execute {@code consumer} as a callback with the acquired object.
      *
      * @param consumer the consumer of the acquired object
+     * @return true if the acquisition happened without synchonization, false otherwise
      */
-    default void acquire(@NotNull Consumer<T> consumer) {
+    default boolean acquire(@NotNull Consumer<T> consumer) {
         final Thread currentThread = Thread.currentThread();
         Acquisition.AcquisitionData data = new Acquisition.AcquisitionData();
 
@@ -43,20 +44,21 @@ public interface Acquirable<T> {
             synchronized (unwrap) {
                 consumer.accept(unwrap);
             }
+
+            // Remove the previously acquired thread from the local list
+            List<Thread> acquiredThreads = data.getAcquiredThreads();
+            if (acquiredThreads != null) {
+                acquiredThreads.remove(elementThread);
+            }
+
+            // Notify the end of the task if required
+            Phaser phaser = data.getPhaser();
+            if (phaser != null) {
+                phaser.arriveAndDeregister();
+            }
         }
 
-        // Remove the previously acquired thread from the local list
-        List<Thread> acquiredThreads = data.getAcquiredThreads();
-        if (acquiredThreads != null) {
-            acquiredThreads.remove(elementThread);
-        }
-
-        // Notify the end of the task if required
-        Phaser phaser = data.getPhaser();
-        if (phaser != null) {
-            phaser.arriveAndDeregister();
-        }
-
+        return sameThread;
     }
 
     /**
