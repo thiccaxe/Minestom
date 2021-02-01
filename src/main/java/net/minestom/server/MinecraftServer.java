@@ -102,7 +102,7 @@ public final class MinecraftServer {
     private static PacketProcessor packetProcessor;
     private static NettyServer nettyServer;
     private static int nettyThreadCount = Runtime.getRuntime().availableProcessors();
-    private static boolean processNettyErrors = false;
+    private static boolean processNettyErrors = true;
 
     private static ExceptionManager exceptionManager;
 
