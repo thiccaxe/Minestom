@@ -63,7 +63,17 @@ public class BinaryReader extends InputStream {
         return buffer.readUnsignedShort();
     }
 
+    /**
+     * Same as readInt
+     */
     public int readInteger() {
+        return buffer.readInt();
+    }
+
+    /**
+     * Same as readInteger, created for parity with BinaryWriter
+     */
+    public int readInt() {
         return buffer.readInt();
     }
 
@@ -145,10 +155,18 @@ public class BinaryReader extends InputStream {
      * @return the read item
      * @throws NullPointerException if the item could not get read
      */
-    public ItemStack readSlot() {
+    public ItemStack readItemStack() {
         final ItemStack itemStack = NBTUtils.readItemStack(this);
         Check.notNull(itemStack, "#readSlot returned null, probably because the buffer was corrupted");
         return itemStack;
+    }
+
+    /**
+     * Same as readItemStack
+     */
+    @Deprecated
+    public ItemStack readSlot() {
+        return readItemStack();
     }
 
     public JsonMessage readJsonMessage(int maxLength) {

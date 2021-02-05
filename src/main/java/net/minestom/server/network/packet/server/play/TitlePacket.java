@@ -3,6 +3,7 @@ package net.minestom.server.network.packet.server.play;
 import net.minestom.server.chat.JsonMessage;
 import net.minestom.server.network.packet.server.ServerPacket;
 import net.minestom.server.network.packet.server.ServerPacketIdentifier;
+import net.minestom.server.utils.binary.BinaryReader;
 import net.minestom.server.utils.binary.BinaryWriter;
 import org.jetbrains.annotations.NotNull;
 
@@ -19,6 +20,13 @@ public class TitlePacket implements ServerPacket {
     public int fadeIn;
     public int stay;
     public int fadeOut;
+
+    /**
+     * Default constructor, required for reflection operations.
+     */
+    public TitlePacket() {
+        action = Action.RESET;
+    }
 
     @Override
     public void write(@NotNull BinaryWriter writer) {
@@ -39,6 +47,33 @@ public class TitlePacket implements ServerPacket {
                 writer.writeInt(stay);
                 writer.writeInt(fadeOut);
                 break;
+            case HIDE:
+            case RESET:
+                break;
+        }
+    }
+
+    @Override
+    public void read(@NotNull BinaryReader reader) {
+        action = Action.values()[reader.readVarInt()];
+        switch (action) {
+            case SET_TITLE:
+                titleText = reader.readJsonMessage(Integer.MAX_VALUE);
+                break;
+
+            case SET_SUBTITLE:
+                subtitleText = reader.readJsonMessage(Integer.MAX_VALUE);
+                break;
+
+            case SET_ACTION_BAR:
+                actionBarText = reader.readJsonMessage(Integer.MAX_VALUE);
+                break;
+
+            case SET_TIMES_AND_DISPLAY:
+                fadeIn = reader.readInt();
+                stay = reader.readInt();
+                fadeOut = reader.readInt();
+
             case HIDE:
             case RESET:
                 break;
