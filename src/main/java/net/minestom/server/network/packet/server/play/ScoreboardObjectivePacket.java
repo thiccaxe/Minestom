@@ -1,8 +1,10 @@
 package net.minestom.server.network.packet.server.play;
 
+import net.minestom.server.chat.ColoredText;
 import net.minestom.server.chat.JsonMessage;
 import net.minestom.server.network.packet.server.ServerPacket;
 import net.minestom.server.network.packet.server.ServerPacketIdentifier;
+import net.minestom.server.utils.binary.BinaryReader;
 import net.minestom.server.utils.binary.BinaryWriter;
 import org.jetbrains.annotations.NotNull;
 
@@ -27,6 +29,12 @@ public class ScoreboardObjectivePacket implements ServerPacket {
      */
     public Type type;
 
+    public ScoreboardObjectivePacket() {
+        objectiveName = "";
+        objectiveValue = ColoredText.of("");
+        type = Type.INTEGER;
+    }
+
     @Override
     public void write(@NotNull BinaryWriter writer) {
         writer.writeSizedString(objectiveName);
@@ -35,6 +43,17 @@ public class ScoreboardObjectivePacket implements ServerPacket {
         if (mode == 0 || mode == 2) {
             writer.writeSizedString(objectiveValue.toString());
             writer.writeVarInt(type.ordinal());
+        }
+    }
+
+    @Override
+    public void read(@NotNull BinaryReader reader) {
+        objectiveName = reader.readSizedString(Integer.MAX_VALUE);
+        mode = reader.readByte();
+
+        if(mode == 0 || mode == 2) {
+            objectiveValue = reader.readJsonMessage(Integer.MAX_VALUE);
+            type = Type.values()[reader.readVarInt()];
         }
     }
 
