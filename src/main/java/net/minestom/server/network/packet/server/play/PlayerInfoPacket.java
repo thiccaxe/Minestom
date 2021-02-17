@@ -4,6 +4,7 @@ import net.minestom.server.chat.JsonMessage;
 import net.minestom.server.entity.GameMode;
 import net.minestom.server.network.packet.server.ServerPacket;
 import net.minestom.server.network.packet.server.ServerPacketIdentifier;
+import net.minestom.server.utils.binary.BinaryReader;
 import net.minestom.server.utils.binary.BinaryWriter;
 import org.jetbrains.annotations.NotNull;
 
@@ -15,6 +16,10 @@ public class PlayerInfoPacket implements ServerPacket {
 
     public Action action;
     public List<PlayerInfo> playerInfos;
+
+    PlayerInfoPacket() {
+        this(Action.UPDATE_DISPLAY_NAME);
+    }
 
     public PlayerInfoPacket(Action action) {
         this.action = action;
@@ -30,6 +35,41 @@ public class PlayerInfoPacket implements ServerPacket {
             if (!playerInfo.getClass().equals(action.getClazz())) continue;
             writer.writeUuid(playerInfo.uuid);
             playerInfo.write(writer);
+        }
+    }
+
+    @Override
+    public void read(@NotNull BinaryReader reader) {
+        action = Action.values()[reader.readVarInt()];
+        int playerInfoCount = reader.readVarInt();
+
+        playerInfos = new ArrayList<>(playerInfoCount);
+
+        for (int i = 0; i < playerInfoCount; i++) {
+            UUID uuid = reader.readUuid();
+            PlayerInfo info;
+            switch (action) {
+                case ADD_PLAYER:
+                    info = new AddPlayer(uuid, reader);
+                    break;
+                case UPDATE_GAMEMODE:
+                    info = new UpdateGamemode(uuid, reader);
+                    break;
+                case UPDATE_LATENCY:
+                    info = new UpdateLatency(uuid, reader);
+                    break;
+                case UPDATE_DISPLAY_NAME:
+                    info = new UpdateDisplayName(uuid, reader);
+                    break;
+                case REMOVE_PLAYER:
+                    info = new RemovePlayer(uuid);
+                    break;
+
+                default:
+                    throw new IllegalArgumentException("Unsupported action encountered: "+action.name());
+            }
+
+            playerInfos.set(i, info);
         }
     }
 
@@ -85,6 +125,27 @@ public class PlayerInfoPacket implements ServerPacket {
             this.ping = ping;
         }
 
+        AddPlayer(UUID uuid, BinaryReader reader) {
+            super(uuid);
+            name = reader.readSizedString(Integer.MAX_VALUE);
+            int propertyCount = reader.readVarInt();
+
+            properties = new ArrayList<>(propertyCount);
+            for (int i = 0; i < propertyCount; i++) {
+                properties.set(i, new Property(reader));
+            }
+
+            gameMode = GameMode.fromId((byte) reader.readVarInt());
+            ping = reader.readVarInt();
+            boolean hasDisplayName = reader.readBoolean();
+
+            if(hasDisplayName) {
+                displayName = reader.readJsonMessage(Integer.MAX_VALUE);
+            } else {
+                displayName = null;
+            }
+        }
+
         @Override
         public void write(BinaryWriter writer) {
             writer.writeSizedString(name);
@@ -117,6 +178,16 @@ public class PlayerInfoPacket implements ServerPacket {
                 this(name, value, null);
             }
 
+            Property(BinaryReader reader) {
+                name = reader.readSizedString(Integer.MAX_VALUE);
+                value = reader.readSizedString(Integer.MAX_VALUE);
+                boolean hasSignature = reader.readBoolean();
+
+                if(hasSignature) {
+                    signature = reader.readSizedString(Integer.MAX_VALUE);
+                }
+            }
+
             public void write(BinaryWriter writer) {
                 writer.writeSizedString(name);
                 writer.writeSizedString(value);
@@ -138,6 +209,11 @@ public class PlayerInfoPacket implements ServerPacket {
             this.gameMode = gameMode;
         }
 
+        UpdateGamemode(UUID uuid, BinaryReader reader) {
+            super(uuid);
+            gameMode = GameMode.fromId((byte) reader.readVarInt());
+        }
+
         @Override
         public void write(BinaryWriter writer) {
             writer.writeVarInt(gameMode.getId());
@@ -153,6 +229,11 @@ public class PlayerInfoPacket implements ServerPacket {
             this.ping = ping;
         }
 
+        UpdateLatency(UUID uuid, BinaryReader reader) {
+            super(uuid);
+            ping = reader.readVarInt();
+        }
+
         @Override
         public void write(BinaryWriter writer) {
             writer.writeVarInt(ping);
@@ -166,6 +247,16 @@ public class PlayerInfoPacket implements ServerPacket {
         public UpdateDisplayName(UUID uuid, JsonMessage displayName) {
             super(uuid);
             this.displayName = displayName;
+        }
+
+        UpdateDisplayName(UUID uuid, BinaryReader reader) {
+            super(uuid);
+            boolean hasDisplayName = reader.readBoolean();
+            if(hasDisplayName) {
+                displayName = reader.readJsonMessage(Integer.MAX_VALUE);
+            } else {
+                displayName = null;
+            }
         }
 
         @Override

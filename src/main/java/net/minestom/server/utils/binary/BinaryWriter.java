@@ -3,6 +3,7 @@ package net.minestom.server.utils.binary;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
 import net.minestom.server.MinecraftServer;
+import net.minestom.server.chat.JsonMessage;
 import net.minestom.server.item.ItemStack;
 import net.minestom.server.utils.BlockPosition;
 import net.minestom.server.utils.NBTUtils;
@@ -165,6 +166,15 @@ public class BinaryWriter extends OutputStream {
     }
 
     /**
+     * Writes a JsonMessage to the buffer.
+     * Simply a writeSizedString with message.toString()
+     * @param message
+     */
+    public void writeJsonMessage(JsonMessage message) {
+        writeSizedString(message.toString());
+    }
+
+    /**
      * Writes a var-int array to the buffer.
      * <p>
      * It is sized by another var-int at the beginning.
@@ -314,5 +324,9 @@ public class BinaryWriter extends OutputStream {
     @Override
     public void write(int b) {
         writeByte((byte) b);
+    }
+
+    public void writeUnsignedShort(int yourShort) {
+        buffer.writeShort(yourShort & 0xFFFF);
     }
 }

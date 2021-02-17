@@ -3,6 +3,7 @@ package net.minestom.server.network.packet.server.play;
 import net.minestom.server.chat.JsonMessage;
 import net.minestom.server.network.packet.server.ServerPacket;
 import net.minestom.server.network.packet.server.ServerPacketIdentifier;
+import net.minestom.server.utils.binary.BinaryReader;
 import net.minestom.server.utils.binary.BinaryWriter;
 import org.jetbrains.annotations.NotNull;
 
@@ -16,6 +17,10 @@ public class PlayerListHeaderAndFooterPacket implements ServerPacket {
     public JsonMessage header; // Only text
     public JsonMessage footer; // Only text
 
+    public PlayerListHeaderAndFooterPacket() {
+        emptyFooter = true;
+        emptyHeader = true;
+    }
 
     @Override
     public void write(@NotNull BinaryWriter writer) {
@@ -30,6 +35,14 @@ public class PlayerListHeaderAndFooterPacket implements ServerPacket {
         } else {
             writer.writeSizedString(footer.toString());
         }
+    }
+
+    @Override
+    public void read(@NotNull BinaryReader reader) {
+        header = reader.readJsonMessage(Integer.MAX_VALUE);
+        footer = reader.readJsonMessage(Integer.MAX_VALUE);
+        emptyHeader = EMPTY_COMPONENT.equals(header.toString());
+        emptyFooter = EMPTY_COMPONENT.equals(footer.toString());
     }
 
     @Override
