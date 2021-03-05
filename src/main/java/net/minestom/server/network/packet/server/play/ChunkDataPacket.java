@@ -3,6 +3,7 @@ package net.minestom.server.network.packet.server.play;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
 import it.unimi.dsi.fastutil.ints.Int2ObjectMap;
+import it.unimi.dsi.fastutil.ints.IntOpenHashSet;
 import it.unimi.dsi.fastutil.ints.IntSet;
 import net.minestom.server.MinecraftServer;
 import net.minestom.server.data.Data;
@@ -13,6 +14,7 @@ import net.minestom.server.network.packet.server.ServerPacket;
 import net.minestom.server.network.packet.server.ServerPacketIdentifier;
 import net.minestom.server.utils.BlockPosition;
 import net.minestom.server.utils.Utils;
+import net.minestom.server.utils.binary.BinaryReader;
 import net.minestom.server.utils.binary.BinaryWriter;
 import net.minestom.server.utils.cache.CacheablePacket;
 import net.minestom.server.utils.cache.TemporaryPacketCache;
@@ -20,8 +22,11 @@ import net.minestom.server.utils.chunk.ChunkUtils;
 import net.minestom.server.world.biomes.Biome;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
+import org.jglrxavpok.hephaistos.nbt.NBT;
 import org.jglrxavpok.hephaistos.nbt.NBTCompound;
+import org.jglrxavpok.hephaistos.nbt.NBTException;
 
+import java.io.IOException;
 import java.util.UUID;
 
 public class ChunkDataPacket implements ServerPacket, CacheablePacket {
@@ -48,6 +53,10 @@ public class ChunkDataPacket implements ServerPacket, CacheablePacket {
     // Cacheable data
     private UUID identifier;
     private long lastUpdate;
+
+    private ChunkDataPacket() {
+        this(new UUID(0, 0), 0);
+    }
 
     public ChunkDataPacket(@Nullable UUID identifier, long lastUpdate) {
         this.identifier = identifier;
@@ -78,6 +87,7 @@ public class ChunkDataPacket implements ServerPacket, CacheablePacket {
 
         writer.writeVarInt(mask);
 
+        // TODO: don't hardcode heightmaps
         // Heightmap
         int[] motionBlocking = new int[16 * 16];
         int[] worldSurface = new int[16 * 16];
@@ -110,25 +120,67 @@ public class ChunkDataPacket implements ServerPacket, CacheablePacket {
         blocks.release();
 
         // Block entities
-        writer.writeVarInt(blockEntities.size());
+        if(blockEntities == null) {
+            writer.writeVarInt(0);
+        } else {
+            writer.writeVarInt(blockEntities.size());
 
-        for (int index : blockEntities) {
-            final BlockPosition blockPosition = ChunkUtils.getBlockPosition(index, chunkX, chunkZ);
+            for (int index : blockEntities) {
+                final BlockPosition blockPosition = ChunkUtils.getBlockPosition(index, chunkX, chunkZ);
 
-            NBTCompound nbt = new NBTCompound()
-                    .setInt("x", blockPosition.getX())
-                    .setInt("y", blockPosition.getY())
-                    .setInt("z", blockPosition.getZ());
+                NBTCompound nbt = new NBTCompound()
+                        .setInt("x", blockPosition.getX())
+                        .setInt("y", blockPosition.getY())
+                        .setInt("z", blockPosition.getZ());
 
-            if (customBlockPaletteStorage != null) {
-                final short customBlockId = customBlockPaletteStorage.getBlockAt(blockPosition.getX(), blockPosition.getY(), blockPosition.getZ());
-                final CustomBlock customBlock = BLOCK_MANAGER.getCustomBlock(customBlockId);
-                if (customBlock != null) {
-                    final Data data = blocksData.get(index);
-                    customBlock.writeBlockEntity(blockPosition, data, nbt);
+                if (customBlockPaletteStorage != null) {
+                    final short customBlockId = customBlockPaletteStorage.getBlockAt(blockPosition.getX(), blockPosition.getY(), blockPosition.getZ());
+                    final CustomBlock customBlock = BLOCK_MANAGER.getCustomBlock(customBlockId);
+                    if (customBlock != null) {
+                        final Data data = blocksData.get(index);
+                        customBlock.writeBlockEntity(blockPosition, data, nbt);
+                    }
+                }
+                writer.writeNBT("", nbt);
+            }
+        }
+    }
+
+    @Override
+    public void read(@NotNull BinaryReader reader) {
+        chunkX = reader.readInt();
+        chunkZ = reader.readInt();
+        fullChunk = reader.readBoolean();
+
+        int mask = reader.readVarInt();
+        try {
+            // TODO: Use heightmaps
+            // unused at the moment
+            NBT heightmaps = reader.readTag();
+
+            if(fullChunk) {
+                int[] biomesIds = reader.readVarIntArray();
+                biomes = new Biome[biomesIds.length];
+                for (int i = 0; i < biomesIds.length; i++) {
+                    biomes[i] = MinecraftServer.getBiomeManager().getById(biomesIds[i]);
                 }
             }
-            writer.writeNBT("", nbt);
+
+            int blockArrayLength = reader.readVarInt();
+            byte[] blockArray = reader.readBytes(blockArrayLength);
+            // TODO: read blocks
+
+            int blockEntityCount = reader.readVarInt();
+            blockEntities = new IntOpenHashSet();
+            for (int i = 0; i < blockEntityCount; i++) {
+                NBTCompound tag = (NBTCompound) reader.readTag();
+
+            }
+
+            // TODO
+        } catch (IOException | NBTException e) {
+            MinecraftServer.getExceptionManager().handleException(e);
+            // TODO: should we throw to avoid an invalid packet?
         }
     }
 
