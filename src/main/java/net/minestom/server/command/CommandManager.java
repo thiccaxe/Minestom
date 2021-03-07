@@ -143,15 +143,17 @@ public final class CommandManager {
     /**
      * Executes a command for a {@link ConsoleSender}.
      *
-     * @param sender  the sender of the command
-     * @param command the raw command string (without the command prefix)
+     * @param sender          the sender of the command
+     * @param command         the raw command string (without the command prefix)
+     * @param executionOption options to disable certain parts of the execution
      * @return the execution result
      */
     @NotNull
-    public CommandResult execute(@NotNull CommandSender sender, @NotNull String command) {
+    public CommandResult execute(@NotNull CommandSender sender, @NotNull String command,
+                                 @NotNull CommandExecutionOption executionOption) {
 
         // Command event
-        if (sender instanceof Player) {
+        if (sender instanceof Player && !executionOption.isIgnoreEvent()) {
             Player player = (Player) sender;
 
             PlayerCommandEvent playerCommandEvent = new PlayerCommandEvent(player, command);
@@ -167,7 +169,7 @@ public final class CommandManager {
 
         {
             // Check for rich-command
-            final CommandResult result = this.dispatcher.execute(sender, command);
+            final CommandResult result = this.dispatcher.execute(sender, command, executionOption);
             if (result.getType() != CommandResult.Type.UNKNOWN) {
                 return result;
             } else {
@@ -188,6 +190,16 @@ public final class CommandManager {
                 return CommandResult.of(CommandResult.Type.SUCCESS, command);
             }
         }
+    }
+
+    /**
+     * Executes a command with the default options.
+     *
+     * @see #execute(CommandSender, String, CommandExecutionOption)
+     */
+    @NotNull
+    public CommandResult execute(@NotNull CommandSender sender, @NotNull String command) {
+        return execute(sender, command, new CommandExecutionOption());
     }
 
     /**

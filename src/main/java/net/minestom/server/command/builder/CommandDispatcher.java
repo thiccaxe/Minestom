@@ -3,6 +3,7 @@ package net.minestom.server.command.builder;
 import com.google.common.cache.Cache;
 import com.google.common.cache.CacheBuilder;
 import it.unimi.dsi.fastutil.ints.Int2ObjectRBTreeMap;
+import net.minestom.server.command.CommandExecutionOption;
 import net.minestom.server.command.CommandSender;
 import net.minestom.server.command.builder.arguments.Argument;
 import net.minestom.server.command.builder.exception.ArgumentSyntaxException;
@@ -87,11 +88,12 @@ public class CommandDispatcher {
      * @return the command result
      */
     @NotNull
-    public CommandResult execute(@NotNull CommandSender source, @NotNull String commandString) {
+    public CommandResult execute(@NotNull CommandSender source, @NotNull String commandString,
+                                 @NotNull CommandExecutionOption executionOption) {
         CommandResult commandResult = parse(commandString);
         ParsedCommand parsedCommand = commandResult.parsedCommand;
         if (parsedCommand != null) {
-            commandResult.commandData = parsedCommand.execute(source, commandString);
+            commandResult.commandData = parsedCommand.execute(source, commandString, executionOption);
         }
         return commandResult;
     }

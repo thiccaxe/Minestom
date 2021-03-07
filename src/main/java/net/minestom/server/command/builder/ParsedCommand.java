@@ -1,5 +1,6 @@
 package net.minestom.server.command.builder;
 
+import net.minestom.server.command.CommandExecutionOption;
 import net.minestom.server.command.CommandSender;
 import net.minestom.server.command.builder.condition.CommandCondition;
 import net.minestom.server.command.builder.exception.ArgumentSyntaxException;
@@ -35,12 +36,13 @@ public class ParsedCommand {
      * @return the command data, null if none
      */
     @Nullable
-    public CommandData execute(@NotNull CommandSender source, @NotNull String commandString) {
+    public CommandData execute(@NotNull CommandSender source, @NotNull String commandString,
+                               @NotNull CommandExecutionOption executionOption) {
         // Global listener
         command.globalListener(source, arguments, commandString);
         // Command condition check
         final CommandCondition condition = command.getCondition();
-        if (condition != null) {
+        if (condition != null && !executionOption.isIgnorePermission()) {
             final boolean result = condition.canUse(source, commandString);
             if (!result)
                 return null;
