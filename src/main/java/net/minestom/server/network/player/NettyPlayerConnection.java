@@ -1,5 +1,6 @@
 package net.minestom.server.network.player;
 
+import com.google.common.collect.Queues;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
 import io.netty.channel.Channel;
@@ -26,13 +27,8 @@ import org.jetbrains.annotations.Nullable;
 
 import javax.crypto.SecretKey;
 import java.net.SocketAddress;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Map;
-import java.util.UUID;
-import java.util.concurrent.BlockingQueue;
+import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.ThreadLocalRandom;
 
 /**
@@ -402,6 +398,7 @@ public class NettyPlayerConnection extends PlayerConnection {
             public PacketWriterThread(WriterRunnable runnable) {
                 super(runnable);
                 this.runnable = runnable;
+                setDaemon(true);
             }
 
             public ByteBuf get(PlayerConnection connection) {
@@ -419,32 +416,30 @@ public class NettyPlayerConnection extends PlayerConnection {
                 }
             }
 
-            public BlockingQueue<Entry> getEntries() {
+            public Queue<Entry> getEntries() {
                 return runnable.entries;
             }
 
         }
 
         private static class WriterRunnable implements Runnable {
-            BlockingQueue<Entry> entries = new LinkedBlockingQueue<>();
+            Queue<Entry> entries = Queues.newConcurrentLinkedQueue();
             Map<PlayerConnection, ByteBuf> map = new ConcurrentHashMap<>();
 
             @Override
             public void run() {
-                try {
-                    while (true) {
-                        final Entry entry = entries.take();
-                        final PlayerConnection connection = entry.connection;
-                        final Object message = entry.message;
+                while (true) {
+                    final Entry entry = entries.poll();
+                    if (entry == null)
+                        continue;
+                    final PlayerConnection connection = entry.connection;
+                    final Object message = entry.message;
 
-                        ByteBuf buffer = map.get(connection);
-                        if (buffer == null) {
-                            continue;
-                        }
-                        writeMessage(buffer, message);
+                    ByteBuf buffer = map.get(connection);
+                    if (buffer == null) {
+                        continue;
                     }
-                } catch (InterruptedException e) {
-                    e.printStackTrace();
+                    writeMessage(buffer, message);
                 }
             }
 
