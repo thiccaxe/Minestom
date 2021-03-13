@@ -26,9 +26,14 @@ import org.jetbrains.annotations.Nullable;
 
 import javax.crypto.SecretKey;
 import java.net.SocketAddress;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Map;
 import java.util.UUID;
+import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.LinkedBlockingQueue;
+import java.util.concurrent.ThreadLocalRandom;
 
 /**
  * Represents a networking connection with Netty.
@@ -36,6 +41,8 @@ import java.util.concurrent.ConcurrentHashMap;
  * It is the implementation used for all network client.
  */
 public class NettyPlayerConnection extends PlayerConnection {
+
+    private static final PacketWriterService PACKET_WRITER_SERVICE = new PacketWriterService();
 
     private final SocketChannel channel;
 
@@ -60,7 +67,7 @@ public class NettyPlayerConnection extends PlayerConnection {
     private UUID bungeeUuid;
     private PlayerSkin bungeeSkin;
 
-    private final ByteBuf tickBuffer = Unpooled.directBuffer();
+    private final int threadIndex = PACKET_WRITER_SERVICE.assign(this);
 
     public NettyPlayerConnection(@NotNull SocketChannel channel) {
         super();
@@ -159,28 +166,7 @@ public class NettyPlayerConnection extends PlayerConnection {
     }
 
     public void write(@NotNull Object message) {
-        if (message instanceof FramedPacket) {
-            final FramedPacket framedPacket = (FramedPacket) message;
-            synchronized (tickBuffer) {
-                final ByteBuf body = framedPacket.getBody();
-                tickBuffer.writeBytes(body, body.readerIndex(), body.readableBytes());
-            }
-            return;
-        } else if (message instanceof ServerPacket) {
-            final ServerPacket serverPacket = (ServerPacket) message;
-            final ByteBuf buffer = PacketUtils.createFramedPacket(serverPacket, true);
-            synchronized (tickBuffer) {
-                tickBuffer.writeBytes(buffer);
-            }
-            buffer.release();
-            return;
-        } else if (message instanceof ByteBuf) {
-            synchronized (tickBuffer) {
-                tickBuffer.writeBytes((ByteBuf) message);
-            }
-            return;
-        }
-        throw new UnsupportedOperationException("type " + message.getClass() + " is not supported");
+        PACKET_WRITER_SERVICE.append(threadIndex, this, message);
     }
 
     public void writeAndFlush(@NotNull Object message) {
@@ -197,8 +183,9 @@ public class NettyPlayerConnection extends PlayerConnection {
     }
 
     private void writeWaitingPackets() {
-        synchronized (tickBuffer) {
-            final ByteBuf copy = tickBuffer.copy();
+        ByteBuf buffer = PACKET_WRITER_SERVICE.getBuffer(threadIndex, this);
+        synchronized (buffer) {
+            final ByteBuf copy = buffer.copy();
 
             ChannelFuture channelFuture = channel.write(new FramedPacket(copy));
             channelFuture.addListener(future -> copy.release());
@@ -212,7 +199,7 @@ public class NettyPlayerConnection extends PlayerConnection {
                 });
             }
 
-            tickBuffer.clear();
+            buffer.clear();
         }
     }
 
@@ -355,11 +342,6 @@ public class NettyPlayerConnection extends PlayerConnection {
         this.serverPort = serverPort;
     }
 
-    @NotNull
-    public ByteBuf getTickBuffer() {
-        return tickBuffer;
-    }
-
     public byte[] getNonce() {
         return nonce;
     }
@@ -367,4 +349,133 @@ public class NettyPlayerConnection extends PlayerConnection {
     public void setNonce(byte[] nonce) {
         this.nonce = nonce;
     }
+
+    private static class PacketWriterService {
+        List<PacketWriterThread> threads = new ArrayList<>();
+
+        {
+            for (int i = 0; i < 10; i++) {
+                WriterRunnable runnable = new WriterRunnable();
+                var thread = new PacketWriterThread(runnable);
+                threads.add(thread);
+                thread.start();
+            }
+        }
+
+        public void append(int index, PlayerConnection connection, Object message) {
+            PacketWriterThread thread = threads.get(index);
+            thread.getEntries().add(new Entry(connection, message));
+        }
+
+        public ByteBuf getBuffer(int index, PlayerConnection connection) {
+            PacketWriterThread thread = threads.get(index);
+            return thread.get(connection);
+        }
+
+        public int assign(PlayerConnection connection) {
+            int index = ThreadLocalRandom.current().nextInt(threads.size());
+
+            PacketWriterThread thread = threads.get(index);
+            thread.register(connection);
+
+            return index;
+        }
+
+        public void remove(int index, PlayerConnection connection) {
+            PacketWriterThread thread = threads.get(index);
+            thread.unregister(connection);
+        }
+
+        private static class PacketWriterThread extends Thread {
+
+            private final WriterRunnable runnable;
+
+            public PacketWriterThread(WriterRunnable runnable) {
+                super(runnable);
+                this.runnable = runnable;
+            }
+
+            public ByteBuf get(PlayerConnection connection) {
+                return runnable.map.get(connection);
+            }
+
+            public void register(PlayerConnection connection) {
+                runnable.map.put(connection, Unpooled.buffer());
+            }
+
+            public void unregister(PlayerConnection connection) {
+                ByteBuf buffer = runnable.map.remove(connection);
+                if (buffer != null) {
+                    buffer.release();
+                }
+            }
+
+            public BlockingQueue<Entry> getEntries() {
+                return runnable.entries;
+            }
+
+        }
+
+        private static class WriterRunnable implements Runnable {
+            BlockingQueue<Entry> entries = new LinkedBlockingQueue<>();
+            Map<PlayerConnection, ByteBuf> map = new ConcurrentHashMap<>();
+
+            @Override
+            public void run() {
+                try {
+                    while (true) {
+                        final Entry entry = entries.take();
+                        final PlayerConnection connection = entry.connection;
+                        final Object message = entry.message;
+
+                        ByteBuf buffer = map.get(connection);
+                        if (buffer == null) {
+                            continue;
+                        }
+                        writeMessage(buffer, message);
+                    }
+                } catch (InterruptedException e) {
+                    e.printStackTrace();
+                }
+            }
+
+            private void writeMessage(ByteBuf buffer, Object message) {
+                if (message instanceof FramedPacket) {
+                    final FramedPacket framedPacket = (FramedPacket) message;
+                    final ByteBuf body = framedPacket.getBody();
+                    synchronized (buffer) {
+                        buffer.writeBytes(body, body.readerIndex(), body.readableBytes());
+                    }
+                    return;
+                } else if (message instanceof ServerPacket) {
+                    final ServerPacket serverPacket = (ServerPacket) message;
+                    final ByteBuf packetBuffer = PacketUtils.createFramedPacket(serverPacket, true);
+                    synchronized (buffer) {
+                        buffer.writeBytes(packetBuffer);
+                    }
+                    packetBuffer.release();
+                    return;
+                } else if (message instanceof ByteBuf) {
+                    synchronized (buffer) {
+                        buffer.writeBytes((ByteBuf) message);
+                    }
+                    return;
+                }
+                throw new UnsupportedOperationException("type " + message.getClass() + " is not supported");
+            }
+
+        }
+
+        private static class Entry {
+            private final PlayerConnection connection;
+            private final Object message;
+
+            public Entry(PlayerConnection connection, Object message) {
+                this.connection = connection;
+                this.message = message;
+            }
+        }
+
+    }
+
 }
