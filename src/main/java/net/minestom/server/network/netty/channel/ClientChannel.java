@@ -70,7 +70,7 @@ public class ClientChannel extends SimpleChannelInboundHandler<InboundPacket> {
             }
 
             // Release tick buffer
-            // TODO release
+            NettyPlayerConnection.PACKET_WRITER_SERVICE.remove(playerConnection);
         }
     }
 

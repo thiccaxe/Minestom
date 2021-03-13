@@ -42,7 +42,7 @@ import java.util.concurrent.ThreadLocalRandom;
  */
 public class NettyPlayerConnection extends PlayerConnection {
 
-    private static final PacketWriterService PACKET_WRITER_SERVICE = new PacketWriterService();
+    public static final PacketWriterService PACKET_WRITER_SERVICE = new PacketWriterService();
 
     private final SocketChannel channel;
 
@@ -166,7 +166,7 @@ public class NettyPlayerConnection extends PlayerConnection {
     }
 
     public void write(@NotNull Object message) {
-        PACKET_WRITER_SERVICE.append(threadIndex, this, message);
+        PACKET_WRITER_SERVICE.append(this, message);
     }
 
     public void writeAndFlush(@NotNull Object message) {
@@ -183,7 +183,7 @@ public class NettyPlayerConnection extends PlayerConnection {
     }
 
     private void writeWaitingPackets() {
-        ByteBuf buffer = PACKET_WRITER_SERVICE.getBuffer(threadIndex, this);
+        ByteBuf buffer = PACKET_WRITER_SERVICE.getBuffer(this);
         synchronized (buffer) {
             final ByteBuf copy = buffer.copy();
 
@@ -350,7 +350,7 @@ public class NettyPlayerConnection extends PlayerConnection {
         this.nonce = nonce;
     }
 
-    private static class PacketWriterService {
+    public static class PacketWriterService {
         List<PacketWriterThread> threads = new ArrayList<>();
 
         {
@@ -362,12 +362,18 @@ public class NettyPlayerConnection extends PlayerConnection {
             }
         }
 
-        public void append(int index, PlayerConnection connection, Object message) {
+        public void append(PlayerConnection connection, Object message) {
+            if (!(connection instanceof NettyPlayerConnection))
+                return;
+            final int index = ((NettyPlayerConnection) connection).threadIndex;
             PacketWriterThread thread = threads.get(index);
             thread.getEntries().add(new Entry(connection, message));
         }
 
-        public ByteBuf getBuffer(int index, PlayerConnection connection) {
+        public ByteBuf getBuffer(PlayerConnection connection) {
+            if (!(connection instanceof NettyPlayerConnection))
+                return null;
+            final int index = ((NettyPlayerConnection) connection).threadIndex;
             PacketWriterThread thread = threads.get(index);
             return thread.get(connection);
         }
@@ -381,7 +387,10 @@ public class NettyPlayerConnection extends PlayerConnection {
             return index;
         }
 
-        public void remove(int index, PlayerConnection connection) {
+        public void remove(PlayerConnection connection) {
+            if (!(connection instanceof NettyPlayerConnection))
+                return;
+            final int index = ((NettyPlayerConnection) connection).threadIndex;
             PacketWriterThread thread = threads.get(index);
             thread.unregister(connection);
         }
