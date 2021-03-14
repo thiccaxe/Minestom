@@ -1,6 +1,10 @@
 package net.minestom.server.utils.cache;
 
+import io.netty.buffer.ByteBuf;
+import net.minestom.server.MinecraftServer;
+import net.minestom.server.network.netty.packet.FramedPacket;
 import net.minestom.server.network.packet.server.ServerPacket;
+import net.minestom.server.utils.PacketUtils;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
@@ -40,5 +44,37 @@ public interface CacheablePacket {
      * @return the last packet update time in milliseconds
      */
     long getTimestamp();
+
+    @Nullable
+    static FramedPacket getCachedPacket(@NotNull ServerPacket serverPacket) {
+        if (!(serverPacket instanceof FramedPacket))
+            return null;
+        if (!MinecraftServer.hasPacketCaching())
+            return null;
+
+        final CacheablePacket cacheablePacket = (CacheablePacket) serverPacket;
+        final UUID identifier = cacheablePacket.getIdentifier();
+        if (identifier == null) {
+            // This packet explicitly asks to do not retrieve the cache
+            return null;
+        }
+
+        final long timestamp = cacheablePacket.getTimestamp();
+        // Try to retrieve the cached buffer
+        TemporaryCache<TimedBuffer> temporaryCache = cacheablePacket.getCache();
+        TimedBuffer timedBuffer = temporaryCache.retrieve(identifier);
+
+        // Update the buffer if non-existent or outdated
+        final boolean shouldUpdate = timedBuffer == null ||
+                timestamp > timedBuffer.getTimestamp();
+
+        if (shouldUpdate) {
+            final ByteBuf tempBuffer = PacketUtils.createFramedPacket(serverPacket, true);
+            timedBuffer = new TimedBuffer(tempBuffer, timestamp);
+        }
+
+        temporaryCache.cache(identifier, timedBuffer);
+        return new FramedPacket(timedBuffer.getBuffer());
+    }
 
 }

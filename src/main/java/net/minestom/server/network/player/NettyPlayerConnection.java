@@ -129,8 +129,10 @@ public class NettyPlayerConnection extends PlayerConnection {
             if (getPlayer() != null) {
                 // Flush happen during #update()
                 write(serverPacket);
-            } else
+            } else {
+                // Not in-game yet
                 writeAndFlush(serverPacket);
+            }
         }
     }
 
@@ -419,34 +421,7 @@ public class NettyPlayerConnection extends PlayerConnection {
                         continue;
                     }
 
-                    if (message instanceof CacheablePacket && MinecraftServer.hasPacketCaching()) {
-                        final CacheablePacket cacheablePacket = (CacheablePacket) message;
-                        final UUID identifier = cacheablePacket.getIdentifier();
-
-                        if (identifier == null) {
-                            // This packet explicitly asks to do not retrieve the cache
-                            writeMessage(buffer, message);
-                        } else {
-                            final long timestamp = cacheablePacket.getTimestamp();
-                            // Try to retrieve the cached buffer
-                            TemporaryCache<TimedBuffer> temporaryCache = cacheablePacket.getCache();
-                            TimedBuffer timedBuffer = temporaryCache.retrieve(identifier);
-
-                            // Update the buffer if non-existent or outdated
-                            final boolean shouldUpdate = timedBuffer == null ||
-                                    timestamp > timedBuffer.getTimestamp();
-
-                            if (shouldUpdate) {
-                                final ByteBuf tempBuffer = PacketUtils.createFramedPacket((ServerPacket) message, false);
-                                timedBuffer = new TimedBuffer(tempBuffer, timestamp);
-                            }
-
-                            temporaryCache.cache(identifier, timedBuffer);
-                            writeMessage(buffer, new FramedPacket(timedBuffer.getBuffer()));
-                        }
-                    } else {
-                        writeMessage(buffer, message);
-                    }
+                    writeMessage(buffer, message);
                 }
             }
 
@@ -460,6 +435,16 @@ public class NettyPlayerConnection extends PlayerConnection {
                     return;
                 } else if (message instanceof ServerPacket) {
                     final ServerPacket serverPacket = (ServerPacket) message;
+
+                    // Verify if the packet is cacheable
+                    {
+                        final FramedPacket framedPacket = CacheablePacket.getCachedPacket(serverPacket);
+                        if (framedPacket != null) {
+                            writeMessage(buffer, framedPacket);
+                            return;
+                        }
+                    }
+
                     final ByteBuf packetBuffer = PacketUtils.createFramedPacket(serverPacket, true);
                     synchronized (buffer) {
                         buffer.writeBytes(packetBuffer);
