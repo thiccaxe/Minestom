@@ -128,34 +128,7 @@ public class NettyPlayerConnection extends PlayerConnection {
         if (shouldSendPacket(serverPacket)) {
             if (getPlayer() != null) {
                 // Flush happen during #update()
-                if (serverPacket instanceof CacheablePacket && MinecraftServer.hasPacketCaching()) {
-                    final CacheablePacket cacheablePacket = (CacheablePacket) serverPacket;
-                    final UUID identifier = cacheablePacket.getIdentifier();
-
-                    if (identifier == null) {
-                        // This packet explicitly asks to do not retrieve the cache
-                        write(serverPacket);
-                    } else {
-                        final long timestamp = cacheablePacket.getTimestamp();
-                        // Try to retrieve the cached buffer
-                        TemporaryCache<TimedBuffer> temporaryCache = cacheablePacket.getCache();
-                        TimedBuffer timedBuffer = temporaryCache.retrieve(identifier);
-
-                        // Update the buffer if non-existent or outdated
-                        final boolean shouldUpdate = timedBuffer == null ||
-                                timestamp > timedBuffer.getTimestamp();
-
-                        if (shouldUpdate) {
-                            final ByteBuf buffer = PacketUtils.createFramedPacket(serverPacket, false);
-                            timedBuffer = new TimedBuffer(buffer, timestamp);
-                        }
-
-                        temporaryCache.cache(identifier, timedBuffer);
-                        write(new FramedPacket(timedBuffer.getBuffer()));
-                    }
-
-                } else
-                    write(serverPacket);
+                write(serverPacket);
             } else
                 writeAndFlush(serverPacket);
         }
@@ -430,8 +403,14 @@ public class NettyPlayerConnection extends PlayerConnection {
             public void run() {
                 while (true) {
                     final Entry entry = entries.poll();
-                    if (entry == null)
+                    if (entry == null) {
+                        try {
+                            Thread.sleep(5);
+                        } catch (InterruptedException e) {
+                            e.printStackTrace();
+                        }
                         continue;
+                    }
                     final PlayerConnection connection = entry.connection;
                     final Object message = entry.message;
 
@@ -439,7 +418,35 @@ public class NettyPlayerConnection extends PlayerConnection {
                     if (buffer == null) {
                         continue;
                     }
-                    writeMessage(buffer, message);
+
+                    if (message instanceof CacheablePacket && MinecraftServer.hasPacketCaching()) {
+                        final CacheablePacket cacheablePacket = (CacheablePacket) message;
+                        final UUID identifier = cacheablePacket.getIdentifier();
+
+                        if (identifier == null) {
+                            // This packet explicitly asks to do not retrieve the cache
+                            writeMessage(buffer, message);
+                        } else {
+                            final long timestamp = cacheablePacket.getTimestamp();
+                            // Try to retrieve the cached buffer
+                            TemporaryCache<TimedBuffer> temporaryCache = cacheablePacket.getCache();
+                            TimedBuffer timedBuffer = temporaryCache.retrieve(identifier);
+
+                            // Update the buffer if non-existent or outdated
+                            final boolean shouldUpdate = timedBuffer == null ||
+                                    timestamp > timedBuffer.getTimestamp();
+
+                            if (shouldUpdate) {
+                                final ByteBuf tempBuffer = PacketUtils.createFramedPacket((ServerPacket) message, false);
+                                timedBuffer = new TimedBuffer(tempBuffer, timestamp);
+                            }
+
+                            temporaryCache.cache(identifier, timedBuffer);
+                            writeMessage(buffer, new FramedPacket(timedBuffer.getBuffer()));
+                        }
+                    } else {
+                        writeMessage(buffer, message);
+                    }
                 }
             }
 
