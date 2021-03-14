@@ -445,7 +445,7 @@ public class NettyPlayerConnection extends PlayerConnection {
                         }
                     }
 
-                    final ByteBuf packetBuffer = PacketUtils.createFramedPacket(serverPacket, true);
+                    final ByteBuf packetBuffer = PacketUtils.createFramedPacket(serverPacket, false);
                     synchronized (buffer) {
                         buffer.writeBytes(packetBuffer);
                     }

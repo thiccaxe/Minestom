@@ -69,7 +69,7 @@ public interface CacheablePacket {
                 timestamp > timedBuffer.getTimestamp();
 
         if (shouldUpdate) {
-            final ByteBuf tempBuffer = PacketUtils.createFramedPacket(serverPacket, true);
+            final ByteBuf tempBuffer = PacketUtils.createFramedPacket(serverPacket, false);
             timedBuffer = new TimedBuffer(tempBuffer, timestamp);
         }
 

@@ -7,7 +7,6 @@ import net.minestom.server.entity.Player;
 import net.minestom.server.listener.manager.PacketListenerManager;
 import net.minestom.server.network.netty.packet.FramedPacket;
 import net.minestom.server.network.packet.server.ServerPacket;
-import net.minestom.server.network.packet.server.ServerPacketIdentifier;
 import net.minestom.server.network.player.NettyPlayerConnection;
 import net.minestom.server.network.player.PlayerConnection;
 import net.minestom.server.utils.binary.BinaryWriter;
@@ -119,7 +118,7 @@ public final class PacketUtils {
 
         // Add 5 for the packet id and for the packet size
         final int size = packetBuffer.writerIndex() + 5 + 5;
-        ByteBuf buffer = BufUtils.getBuffer(true, size);
+        ByteBuf buffer = BufUtils.getBuffer(false, size);
 
         writePacket(buffer, packetBuffer, packet.getId());
 
@@ -147,13 +146,7 @@ public final class PacketUtils {
      */
     @NotNull
     private static ByteBuf getPacketBuffer(@NotNull ServerPacket packet) {
-        BinaryWriter writer;
-        if (packet.getId() == ServerPacketIdentifier.CHUNK_DATA || packet.getId() == ServerPacketIdentifier.UPDATE_LIGHT) {
-            writer = new BinaryWriter(BufUtils.getBuffer(true, 40_000));
-        } else {
-            writer = new BinaryWriter(BufUtils.getBuffer(true));
-        }
-
+        BinaryWriter writer = new BinaryWriter(BufUtils.getBuffer(false));
         try {
             packet.write(writer);
         } catch (Exception e) {
