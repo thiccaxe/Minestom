@@ -11,6 +11,8 @@ import net.minestom.server.utils.validate.Check;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
+import java.util.Arrays;
+
 import static net.minestom.server.instance.Chunk.CHUNK_SECTION_COUNT;
 import static net.minestom.server.instance.Chunk.CHUNK_SECTION_SIZE;
 
@@ -51,9 +53,9 @@ public class PaletteStorage implements PublicCloneable<PaletteStorage> {
     private long[][] sectionBlocks;
 
     // chunk section - palette index = block id
-    private Short2ShortLinkedOpenHashMap[] paletteBlockMaps;
+    private Short2ShortLinkedOpenHashMap[] paletteToBlockMaps;
     // chunk section - block id = palette index
-    private Short2ShortOpenHashMap[] blockPaletteMaps;
+    private Short2ShortOpenHashMap[] blockToPaletteMaps;
 
     /**
      * Creates a new palette storage.
@@ -77,8 +79,10 @@ public class PaletteStorage implements PublicCloneable<PaletteStorage> {
     private void init() {
         this.sectionBlocks = new long[CHUNK_SECTION_COUNT][0];
 
-        this.paletteBlockMaps = new Short2ShortLinkedOpenHashMap[CHUNK_SECTION_COUNT];
-        this.blockPaletteMaps = new Short2ShortOpenHashMap[CHUNK_SECTION_COUNT];
+        this.paletteToBlockMaps = new Short2ShortLinkedOpenHashMap[CHUNK_SECTION_COUNT];
+        Arrays.setAll(paletteToBlockMaps, value -> createPaletteBlockMap());
+        this.blockToPaletteMaps = new Short2ShortOpenHashMap[CHUNK_SECTION_COUNT];
+        Arrays.setAll(blockToPaletteMaps, value -> createBlockPaletteMap());
     }
 
     public void setBlockAt(int x, int y, int z, short blockId) {
@@ -106,8 +110,18 @@ public class PaletteStorage implements PublicCloneable<PaletteStorage> {
      */
     @Nullable
     public short[] getPalette(int section) {
-        Short2ShortLinkedOpenHashMap paletteBlockMap = paletteBlockMaps[section];
+        Short2ShortLinkedOpenHashMap paletteBlockMap = paletteToBlockMaps[section];
         return paletteBlockMap != null ? paletteBlockMap.values().toShortArray() : null;
+    }
+
+    @NotNull
+    public Short2ShortLinkedOpenHashMap[] getPaletteToBlockMaps() {
+        return paletteToBlockMaps;
+    }
+
+    @NotNull
+    public Short2ShortOpenHashMap[] getBlockToPaletteMaps() {
+        return blockToPaletteMaps;
     }
 
     /**
@@ -170,8 +184,8 @@ public class PaletteStorage implements PublicCloneable<PaletteStorage> {
             PaletteStorage paletteStorage = (PaletteStorage) super.clone();
             paletteStorage.sectionBlocks = sectionBlocks.clone();
 
-            paletteStorage.paletteBlockMaps = paletteBlockMaps.clone();
-            paletteStorage.blockPaletteMaps = blockPaletteMaps.clone();
+            paletteStorage.paletteToBlockMaps = paletteToBlockMaps.clone();
+            paletteStorage.blockToPaletteMaps = blockToPaletteMaps.clone();
             return paletteStorage;
         } catch (CloneNotSupportedException e) {
             MinecraftServer.getExceptionManager().handleException(e);
@@ -193,18 +207,10 @@ public class PaletteStorage implements PublicCloneable<PaletteStorage> {
             return blockId;
         }
 
-        Short2ShortOpenHashMap blockPaletteMap = blockPaletteMaps[section];
-        if (blockPaletteMap == null) {
-            blockPaletteMap = createBlockPaletteMap();
-            blockPaletteMaps[section] = blockPaletteMap;
-        }
+        Short2ShortOpenHashMap blockPaletteMap = blockToPaletteMaps[section];
 
         if (!blockPaletteMap.containsKey(blockId)) {
-            Short2ShortLinkedOpenHashMap paletteBlockMap = paletteBlockMaps[section];
-            if (paletteBlockMap == null) {
-                paletteBlockMap = createPaletteBlockMap();
-                paletteBlockMaps[section] = paletteBlockMap;
-            }
+            Short2ShortLinkedOpenHashMap paletteBlockMap = paletteToBlockMaps[section];
 
             // Resize the palette if full
             if (paletteBlockMap.size() >= getMaxPaletteSize()) {
@@ -232,8 +238,8 @@ public class PaletteStorage implements PublicCloneable<PaletteStorage> {
         newBitsPerEntry = fixBitsPerEntry(newBitsPerEntry);
 
         PaletteStorage paletteStorageCache = new PaletteStorage(newBitsPerEntry, bitsIncrement);
-        paletteStorageCache.paletteBlockMaps = paletteBlockMaps;
-        paletteStorageCache.blockPaletteMaps = blockPaletteMaps;
+        paletteStorageCache.paletteToBlockMaps = paletteToBlockMaps;
+        paletteStorageCache.blockToPaletteMaps = blockToPaletteMaps;
 
         for (int y = 0; y < Chunk.CHUNK_SIZE_Y; y++) {
             for (int x = 0; x < Chunk.CHUNK_SIZE_X; x++) {
@@ -348,7 +354,7 @@ public class PaletteStorage implements PublicCloneable<PaletteStorage> {
 
         // Change to palette value and return
         return paletteStorage.hasPalette ?
-                paletteStorage.paletteBlockMaps[section].get((short) value) :
+                paletteStorage.paletteToBlockMaps[section].get((short) value) :
                 (short) value;
     }
 
