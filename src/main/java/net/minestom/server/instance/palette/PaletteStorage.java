@@ -233,7 +233,7 @@ public class PaletteStorage implements PublicCloneable<PaletteStorage> {
      *
      * @param newBitsPerEntry the new bits per entry count
      */
-    private void resize(int newBitsPerEntry) {
+    public void resize(int newBitsPerEntry) {
         // FIXME: artifacts when resizing
         newBitsPerEntry = fixBitsPerEntry(newBitsPerEntry);
 
