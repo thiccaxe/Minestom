@@ -20,6 +20,7 @@ import net.minestom.server.utils.time.UpdateOption;
 public class Main {
 
     public static void main(String[] args) {
+        //Optimizations.UNSAFE_enableAllOptimizations();
         MinecraftServer minecraftServer = MinecraftServer.init();
 
         // MinecraftServer.setShouldProcessNettyErrors(true);
@@ -70,7 +71,7 @@ public class Main {
         //MojangAuth.init();
 
         minecraftServer.start("0.0.0.0", 25565, PlayerInit.getResponseDataConsumer());
-        //Runtime.getRuntime().addShutdownHook(new Thread(MinecraftServer::stopCleanly));
+        Runtime.getRuntime().addShutdownHook(new Thread(MinecraftServer::stopCleanly));
     }
 
 }
