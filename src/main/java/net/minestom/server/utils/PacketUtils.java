@@ -72,8 +72,6 @@ public final class PacketUtils {
                     if (playerValidator != null && !playerValidator.isValid(player))
                         continue;
 
-                    finalBuffer.retain();
-
                     final PlayerConnection playerConnection = player.getPlayerConnection();
                     if (playerConnection instanceof NettyPlayerConnection) {
                         final NettyPlayerConnection nettyPlayerConnection = (NettyPlayerConnection) playerConnection;
@@ -81,8 +79,6 @@ public final class PacketUtils {
                     } else {
                         playerConnection.sendPacket(packet);
                     }
-
-                    finalBuffer.release();
                 }
                 finalBuffer.release(); // Release last reference
             }
