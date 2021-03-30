@@ -1,6 +1,7 @@
 package net.minestom.codegen;
 
 import com.squareup.javapoet.*;
+import org.apache.commons.lang3.tuple.Pair;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -20,8 +21,11 @@ public class EnumGenerator implements CodeGenerator {
 
     private final String enumName;
     private ParameterSpec[] parameters;
+    private List<TypeName> superinterfaces = new LinkedList<>();
     private List<Method> methods = new LinkedList<>();
+    private List<Field> staticFields = new LinkedList<>();
     private List<Instance> instances = new LinkedList<>();
+    private List<Pair<Field, Boolean>> fields = new LinkedList<>();
     private List<Field> hardcodedFields = new LinkedList<>();
     private List<AnnotationSpec> annotations = new LinkedList<>();
     private String enumPackage;
@@ -32,6 +36,10 @@ public class EnumGenerator implements CodeGenerator {
         this.enumPackage = packageName;
         parameters = new ParameterSpec[0];
         this.enumName = enumName;
+    }
+
+    public void addSuperinterface(TypeName typeNames) {
+        superinterfaces.add(typeNames);
     }
 
     public void setParams(ParameterSpec... parameters) {
@@ -50,6 +58,10 @@ public class EnumGenerator implements CodeGenerator {
         methods.add(new Method(true, name, signature, returnType, code, false));
     }
 
+    public void addStaticField(TypeName type, String name, String value) {
+        staticFields.add(new Field(type, name, value));
+    }
+
     public void addInstance(String name, Object... parameters) {
         instances.add(new Instance(name, parameters));
     }
@@ -58,17 +70,22 @@ public class EnumGenerator implements CodeGenerator {
         TypeSpec.Builder enumClass = TypeSpec.enumBuilder(ClassName.get(enumPackage, enumName)).addModifiers(Modifier.PUBLIC);
 
         enumClass.addJavadoc(COMMENT);
-        for(AnnotationSpec annotation : annotations) {
+        for (AnnotationSpec annotation : annotations) {
             enumClass.addAnnotation(annotation);
         }
 
-        for(Instance instance : instances) {
+        for (Instance instance : instances) {
             StringBuilder format = new StringBuilder();
             for (int i = 0; i < instance.parameters.length; i++) {
                 if (i != 0) {
                     format.append(", ");
                 }
-                format.append("$L");
+                if (instance.parameters[i] instanceof ConstructorLambda) {
+                    instance.parameters[i] = ((ConstructorLambda) instance.parameters[i]).getClassName();
+                    format.append("$T::new");
+                } else {
+                    format.append("$L");
+                }
             }
 
             // generate instances
@@ -76,7 +93,10 @@ public class EnumGenerator implements CodeGenerator {
             enumClass.addEnumConstant(instance.name, arguments);
         }
 
-        if(staticBlock != null) {
+        // add superinterfaces
+        enumClass.addSuperinterfaces(superinterfaces);
+
+        if (staticBlock != null) {
             enumClass.addStaticBlock(staticBlock);
         }
 
@@ -85,8 +105,15 @@ public class EnumGenerator implements CodeGenerator {
             // properties
             for (ParameterSpec property : parameters) {
                 enumClass.addField(FieldSpec.builder(property.type, property.name)
-                        .addModifiers(Modifier.PRIVATE)
+                        .addModifiers(Modifier.PRIVATE, Modifier.FINAL)
                         .addAnnotations(property.annotations)
+                        .build());
+            }
+
+            for (Field field : staticFields) {
+                enumClass.addField(FieldSpec.builder(field.type, field.name)
+                        .initializer("$L", field.value)
+                        .addModifiers(Modifier.PRIVATE, Modifier.FINAL, Modifier.STATIC)
                         .build());
             }
 
@@ -96,6 +123,18 @@ public class EnumGenerator implements CodeGenerator {
                         .initializer("$L", hardcoded.value)
                         .addModifiers(Modifier.PRIVATE)
                         .build());
+            }
+
+            // normal fields
+            for (Pair<Field, Boolean> field : fields) {
+                FieldSpec.Builder builder = FieldSpec.builder(field.getLeft().type, field.getLeft().name)
+                        .addModifiers(Modifier.PRIVATE);
+
+                if (field.getRight()) {
+                    builder.addModifiers(Modifier.FINAL);
+                }
+
+                enumClass.addField(builder.build());
             }
 
             // constructor
@@ -121,10 +160,10 @@ public class EnumGenerator implements CodeGenerator {
             }
             methodBuilder.addModifiers(Modifier.PUBLIC);
             methodBuilder.returns(m.returnType);
-            if(m.vararg) {
+            if (m.vararg) {
                 methodBuilder.varargs(true);
             }
-            for(ParameterSpec parameter : m.signature) {
+            for (ParameterSpec parameter : m.signature) {
                 methodBuilder.addParameter(parameter);
             }
 
@@ -134,7 +173,6 @@ public class EnumGenerator implements CodeGenerator {
 
             enumClass.addMethod(methodBuilder.build());
         }
-
         JavaFile file = JavaFile.builder(enumPackage, enumClass.build())
                 .skipJavaLangImports(true)
                 .indent("    ")
@@ -148,6 +186,10 @@ public class EnumGenerator implements CodeGenerator {
 
     public void appendToConstructor(Consumer<CodeBlock.Builder> constructorEnding) {
         constructorEnds.add(constructorEnding);
+    }
+
+    public void addField(TypeName type, String name, boolean isFinal) {
+        fields.add(Pair.of(new Field(type, name), isFinal));
     }
 
     public void addHardcodedField(TypeName type, String name, String value) {
@@ -193,6 +235,10 @@ public class EnumGenerator implements CodeGenerator {
         private TypeName type;
         private String name;
         private String value;
+
+        public Field(TypeName type, String name) {
+            this(type, name, null);
+        }
 
         public Field(TypeName type, String name, String value) {
             this.type = type;

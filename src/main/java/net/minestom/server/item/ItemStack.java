@@ -2,6 +2,10 @@ package net.minestom.server.item;
 
 import it.unimi.dsi.fastutil.objects.Object2ShortMap;
 import it.unimi.dsi.fastutil.objects.Object2ShortOpenHashMap;
+import net.kyori.adventure.text.Component;
+import net.kyori.adventure.text.event.HoverEvent;
+import net.kyori.adventure.text.event.HoverEvent.ShowItem;
+import net.kyori.adventure.text.event.HoverEventSource;
 import net.minestom.server.MinecraftServer;
 import net.minestom.server.chat.JsonMessage;
 import net.minestom.server.data.Data;
@@ -26,6 +30,8 @@ import org.jetbrains.annotations.Nullable;
 import org.jglrxavpok.hephaistos.nbt.NBTCompound;
 
 import java.util.*;
+import java.util.function.UnaryOperator;
+import java.util.stream.Collectors;
 
 // TODO should we cache a ByteBuf of this item for faster packet write
 
@@ -38,7 +44,7 @@ import java.util.*;
  * Here a non-exhaustive list of what you can do to update the item:
  * {@link PlayerInventory#refreshSlot(short)}, {@link Inventory#refreshSlot(short)} or a raw {@link SetSlotPacket}.
  */
-public class ItemStack implements DataContainer, PublicCloneable<ItemStack> {
+public class ItemStack implements DataContainer, PublicCloneable<ItemStack>, HoverEventSource<ShowItem> {
 
     public static final OwnershipHandler<Data> DATA_OWNERSHIP = new OwnershipHandler<>();
     public static final String OWNERSHIP_DATA_KEY = "ownership_identifier";
@@ -54,9 +60,9 @@ public class ItemStack implements DataContainer, PublicCloneable<ItemStack> {
     private byte amount;
     private int damage;
 
-    private JsonMessage displayName;
+    private Component displayName;
     private boolean unbreakable;
-    private List<JsonMessage> lore;
+    private List<Component> lore;
 
     private Object2ShortMap<Enchantment> enchantmentMap;
     private List<ItemAttribute> attributes;
@@ -66,6 +72,9 @@ public class ItemStack implements DataContainer, PublicCloneable<ItemStack> {
 
     private StackingRule stackingRule;
     private Data data;
+
+    private Set<String> canDestroy;
+    private Set<String> canPlaceOn;
 
     {
         if (defaultStackingRule == null)
@@ -83,11 +92,18 @@ public class ItemStack implements DataContainer, PublicCloneable<ItemStack> {
         this.enchantmentMap = new Object2ShortOpenHashMap<>();
         this.attributes = new ArrayList<>();
 
+        this.canDestroy = new HashSet<>();
+        this.canPlaceOn = new HashSet<>();
+
         this.itemMeta = findMeta();
     }
 
     public ItemStack(@NotNull Material material, byte amount) {
         this(material, amount, (short) 0);
+    }
+
+    public ItemStack(@NotNull Material material) {
+        this(material, (byte) 1, (short) 0);
     }
 
     /**
@@ -166,9 +182,8 @@ public class ItemStack implements DataContainer, PublicCloneable<ItemStack> {
                 return true;
             }
 
-            final JsonMessage itemDisplayName = itemStack.getDisplayName();
-            final boolean displayNameCheck = (displayName == null && itemDisplayName == null) ||
-                    (displayName != null && displayName.equals(itemDisplayName));
+            final boolean displayNameCheck = Objects.equals(displayName, itemStack.displayName);
+            final boolean loreCheck = Objects.equals(lore, itemStack.lore);
 
             final Data itemData = itemStack.getData();
             final boolean dataCheck = (data == null && itemData == null) ||
@@ -179,14 +194,63 @@ public class ItemStack implements DataContainer, PublicCloneable<ItemStack> {
 
             return itemStack.getMaterial() == material &&
                     displayNameCheck &&
+                    loreCheck &&
                     itemStack.isUnbreakable() == unbreakable &&
                     itemStack.getDamage() == damage &&
                     itemStack.enchantmentMap.equals(enchantmentMap) &&
                     itemStack.attributes.equals(attributes) &&
                     itemStack.hideFlag == hideFlag &&
                     sameMeta &&
-                    dataCheck;
+                    dataCheck &&
+                    itemStack.canPlaceOn.equals(canPlaceOn) &&
+                    itemStack.canDestroy.equals(canDestroy);
         }
+    }
+
+    @Override
+    public boolean equals(Object o) {
+        return o instanceof ItemStack &&
+                isSimilar((ItemStack) o) && ((ItemStack) o).getAmount() == getAmount();
+    }
+
+    /**
+     * Checks if this item can be placed on the block.
+     * This should be enforced only for adventure mode players.
+     *
+     * @param block the block's namespaceID
+     * @return <code>true</code> if it can be placed, <code>false</code> otherwise
+     */
+    public boolean canPlaceOn(String block) {
+        return canPlaceOn.contains(block);
+    }
+
+    /**
+     * Gets the blocks that this item can be placed on
+     *
+     * @return the {@link Set} of blocks
+     */
+    public Set<String> getCanPlaceOn() {
+        return canPlaceOn;
+    }
+
+    /**
+     * Checks if this item is allowed to break the provided block.
+     * This should be enforced only for adventure mode players.
+     *
+     * @param block the block's namespaceID
+     * @return <code>true</code> if this item can destroy it, otherwise <code>false</code>
+     */
+    public boolean canDestroy(String block) {
+        return canDestroy.contains(block);
+    }
+
+    /**
+     * Gets the blocks that this item can destroy
+     *
+     * @return the {@link Set} of blocks
+     */
+    public Set<String> getCanDestroy() {
+        return canDestroy;
     }
 
     /**
@@ -259,9 +323,21 @@ public class ItemStack implements DataContainer, PublicCloneable<ItemStack> {
      * Gets the item display name.
      *
      * @return the item display name, can be null if not present
+     * @deprecated Use {@link #getDisplayName()}
+     */
+    @Deprecated
+    @Nullable
+    public JsonMessage getDisplayNameJson() {
+        return JsonMessage.fromComponent(displayName);
+    }
+
+    /**
+     * Gets the item display name.
+     *
+     * @return the item display name, can be null if not present
      */
     @Nullable
-    public JsonMessage getDisplayName() {
+    public Component getDisplayName() {
         return displayName;
     }
 
@@ -269,8 +345,19 @@ public class ItemStack implements DataContainer, PublicCloneable<ItemStack> {
      * Sets the item display name.
      *
      * @param displayName the item display name
+     * @deprecated Use {@link #setDisplayName(Component)}
      */
+    @Deprecated
     public void setDisplayName(@Nullable JsonMessage displayName) {
+        this.setDisplayName(displayName == null ? null : displayName.asComponent());
+    }
+
+    /**
+     * Sets the item display name.
+     *
+     * @param displayName the item display name
+     */
+    public void setDisplayName(@Nullable Component displayName) {
         this.displayName = displayName;
     }
 
@@ -287,9 +374,21 @@ public class ItemStack implements DataContainer, PublicCloneable<ItemStack> {
      * Gets the item lore.
      *
      * @return a modifiable list containing the item lore, can be empty if not present
+     * @deprecated Use {@link #getLore()}
+     */
+    @Deprecated
+    @NotNull
+    public List<JsonMessage> getLoreJson() {
+        return lore.stream().map(JsonMessage::fromComponent).collect(Collectors.toList());
+    }
+
+    /**
+     * Gets the item lore.
+     *
+     * @return a modifiable list containing the item lore, can be empty if not present
      */
     @NotNull
-    public List<JsonMessage> getLore() {
+    public List<Component> getLore() {
         return lore;
     }
 
@@ -297,8 +396,20 @@ public class ItemStack implements DataContainer, PublicCloneable<ItemStack> {
      * Sets the item lore.
      *
      * @param lore the item lore, can be empty to remove
+     * @deprecated Use {@link #setLore}
      */
-    public void setLore(@NotNull List<JsonMessage> lore) {
+    @Deprecated
+    public void setLoreJson(@NotNull List<JsonMessage> lore) {
+        this.lore = lore.stream().map(JsonMessage::asComponent).collect(Collectors.toList());
+    }
+
+    /**
+     * Sets the item lore.
+     *
+     * @param lore the item lore, can be empty to remove
+     */
+    @NotNull
+    public void setLore(List<Component> lore) {
         this.lore = lore;
     }
 
@@ -549,7 +660,9 @@ public class ItemStack implements DataContainer, PublicCloneable<ItemStack> {
                 hideFlag != 0 ||
                 customModelData != 0 ||
                 (itemMeta != null && itemMeta.hasNbt()) ||
-                (data != null && !data.isEmpty());
+                (data != null && !data.isEmpty()) ||
+                !canDestroy.isEmpty() ||
+                !canPlaceOn.isEmpty();
     }
 
     /**
@@ -587,6 +700,9 @@ public class ItemStack implements DataContainer, PublicCloneable<ItemStack> {
 
             itemStack.hideFlag = hideFlag;
             itemStack.customModelData = customModelData;
+
+            itemStack.canPlaceOn = new HashSet<>(canPlaceOn);
+            itemStack.canDestroy = new HashSet<>(canDestroy);
 
             if (itemMeta != null)
                 itemStack.itemMeta = itemMeta.clone();
@@ -740,6 +856,11 @@ public class ItemStack implements DataContainer, PublicCloneable<ItemStack> {
      */
     public ItemDisplay getCustomDisplay(Player player) {
         throw new UnsupportedOperationException("Not implemented yet");
+    }
+
+    @Override
+    public @NotNull HoverEvent<ShowItem> asHoverEvent(@NotNull UnaryOperator<ShowItem> op) {
+        return HoverEvent.showItem(op.apply(ShowItem.of(this.material, this.amount, NBTUtils.asBinaryTagHolder(this.toNBT().getCompound("tag")))));
     }
 
     // Callback events

@@ -1,9 +1,9 @@
 package net.minestom.server.utils.binary;
 
-import com.google.gson.JsonObject;
-import com.google.gson.JsonParser;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
+import net.kyori.adventure.text.Component;
+import net.kyori.adventure.text.serializer.gson.GsonComponentSerializer;
 import net.minestom.server.chat.JsonMessage;
 import net.minestom.server.item.ItemStack;
 import net.minestom.server.utils.BlockPosition;
@@ -108,10 +108,8 @@ public class BinaryReader extends InputStream {
     public String readSizedString(int maxLength) {
         final int length = readVarInt();
         Check.stateCondition(length > maxLength,
-                "String length (" + length + ") was higher than the max length of " + maxLength);
-
-        final byte[] bytes = readBytes(length);
-        return new String(bytes, StandardCharsets.UTF_8);
+                "String length ({0}) was higher than the max length of {1}", length, maxLength);
+        return buffer.readCharSequence(length, StandardCharsets.UTF_8).toString();
     }
 
     public byte[] readBytes(int length) {
@@ -183,10 +181,18 @@ public class BinaryReader extends InputStream {
         return readItemStack();
     }
 
+    /**
+     * Use {@link #readComponent(int)}
+     */
+    @Deprecated
     public JsonMessage readJsonMessage(int maxLength) {
-        final String string = readSizedString(maxLength);
-        final JsonObject jsonObject = JsonParser.parseString(string).getAsJsonObject();
+        final String jsonObject = readSizedString(maxLength);
         return new JsonMessage.RawJsonMessage(jsonObject);
+    }
+
+    public Component readComponent(int maxLength) {
+        final String jsonObject = readSizedString(maxLength);
+        return GsonComponentSerializer.gson().deserialize(jsonObject);
     }
 
     public ByteBuf getBuffer() {

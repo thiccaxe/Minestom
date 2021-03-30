@@ -2,6 +2,8 @@ package net.minestom.server.entity;
 
 import net.minestom.server.MinecraftServer;
 import net.minestom.server.chat.ColoredText;
+import net.kyori.adventure.text.Component;
+import net.minestom.server.adventure.AdventureSerializer;
 import net.minestom.server.chat.JsonMessage;
 import net.minestom.server.item.ItemStack;
 import net.minestom.server.network.packet.server.play.EntityMetaDataPacket;
@@ -20,10 +22,7 @@ import org.jglrxavpok.hephaistos.nbt.NBTEnd;
 import org.jglrxavpok.hephaistos.nbt.NBTException;
 
 import java.io.IOException;
-import java.util.Collection;
-import java.util.Collections;
-import java.util.Map;
-import java.util.UUID;
+import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.function.Consumer;
 import java.util.function.Function;
@@ -48,10 +47,12 @@ public class Metadata {
         return new Value<>(TYPE_STRING, value, writer -> writer.writeSizedString(value), reader -> reader.readSizedString(Integer.MAX_VALUE));
     }
 
+    @Deprecated
     public static Value<JsonMessage> Chat(@NotNull JsonMessage value) {
         return new Value<>(TYPE_CHAT, value, writer -> writer.writeSizedString(value.toString()), reader -> reader.readJsonMessage(Integer.MAX_VALUE));
     }
 
+    @Deprecated
     public static Value<JsonMessage> OptChat(@Nullable JsonMessage value) {
         return new Value<>(TYPE_OPTCHAT, value, writer -> {
             final boolean present = value != null;
@@ -67,6 +68,26 @@ public class Metadata {
             } else {
                 return null;
             }
+        });
+    }
+
+    public static Value<Component> Chat(@NotNull Component value) {
+        return new Value<>(TYPE_CHAT, value, writer -> writer.writeSizedString(AdventureSerializer.serialize(value)), reader -> reader.readComponent(Integer.MAX_VALUE));
+    }
+
+    public static Value<Component> OptChat(@Nullable Component value) {
+        return new Value<>(TYPE_OPTCHAT, value, writer -> {
+            final boolean present = value != null;
+            writer.writeBoolean(present);
+            if (present) {
+                writer.writeSizedString(AdventureSerializer.serialize(value));
+            }
+        }, reader -> {
+            boolean present = reader.readBoolean();
+            if(present) {
+                return reader.readComponent(Integer.MAX_VALUE);
+            }
+            return null;
         });
     }
 
@@ -209,14 +230,18 @@ public class Metadata {
 
     private final Entity entity;
 
-    private Map<Byte, Entry<?>> metadataMap = new ConcurrentHashMap<>();
+    private final Map<Byte, Entry<?>> metadataMap = new ConcurrentHashMap<>();
+
+    private volatile boolean notifyAboutChanges = true;
+    private final Map<Byte, Entry<?>> notNotifiedChanges = new HashMap<>();
 
     public Metadata(@Nullable Entity entity) {
         this.entity = entity;
     }
 
+    @SuppressWarnings("unchecked")
     public <T> T getIndex(byte index, @Nullable T defaultValue) {
-        Entry<?> value = metadataMap.get(index);
+        Entry<?> value = this.metadataMap.get(index);
         return value != null ? (T) value.getMetaValue().value : defaultValue;
     }
 
@@ -225,13 +250,47 @@ public class Metadata {
         this.metadataMap.put(index, entry);
 
         // Send metadata packet to update viewers and self
-        if (entity != null && entity.isActive()) {
+        if (this.entity != null && this.entity.isActive()) {
+            if (!this.notifyAboutChanges) {
+                synchronized (this.notNotifiedChanges) {
+                    this.notNotifiedChanges.put(index, entry);
+                }
+                return;
+            }
             EntityMetaDataPacket metaDataPacket = new EntityMetaDataPacket();
-            metaDataPacket.entityId = entity.getEntityId();
+            metaDataPacket.entityId = this.entity.getEntityId();
             metaDataPacket.entries = Collections.singleton(entry);
 
             this.entity.sendPacketToViewersAndSelf(metaDataPacket);
         }
+    }
+
+    public void setNotifyAboutChanges(boolean notifyAboutChanges) {
+        if (this.notifyAboutChanges == notifyAboutChanges) {
+            return;
+        }
+
+        Collection<Entry<?>> entries = null;
+        synchronized (this.notNotifiedChanges) {
+            this.notifyAboutChanges = notifyAboutChanges;
+            if (notifyAboutChanges) {
+                entries = this.notNotifiedChanges.values();
+                if (entries.isEmpty()) {
+                    return;
+                }
+                this.notNotifiedChanges.clear();
+            }
+        }
+
+        if (entries == null || this.entity == null || !this.entity.isActive()) {
+            return;
+        }
+
+        EntityMetaDataPacket metaDataPacket = new EntityMetaDataPacket();
+        metaDataPacket.entityId = this.entity.getEntityId();
+        metaDataPacket.entries = entries;
+
+        this.entity.sendPacketToViewersAndSelf(metaDataPacket);
     }
 
     @NotNull
@@ -244,7 +303,7 @@ public class Metadata {
         protected byte index;
         protected Value<T> value;
 
-        private Entry(byte index, @NotNull Value<T> value) {
+        public Entry(byte index, @NotNull Value<T> value) {
             this.index = index;
             this.value = value;
         }
@@ -284,7 +343,7 @@ public class Metadata {
             case TYPE_CHAT:
                 return (Value<T>) Chat(ColoredText.of(""));
             case TYPE_OPTCHAT:
-                return (Value<T>) OptChat(null);
+                return (Value<T>) OptChat((Component) null);
             case TYPE_SLOT:
                 return (Value<T>) Slot(ItemStack.getAirItem());
             case TYPE_BOOLEAN:
@@ -330,7 +389,7 @@ public class Metadata {
         protected final Consumer<BinaryWriter> valueWriter;
         protected final Function<BinaryReader, T> readingFunction;
 
-        private Value(int type, T value, @NotNull Consumer<BinaryWriter> valueWriter, @NotNull Function<BinaryReader, T> readingFunction) {
+        public Value(int type, T value, @NotNull Consumer<BinaryWriter> valueWriter, @NotNull Function<BinaryReader, T> readingFunction) {
             this.type = type;
             this.value = value;
             this.valueWriter = valueWriter;

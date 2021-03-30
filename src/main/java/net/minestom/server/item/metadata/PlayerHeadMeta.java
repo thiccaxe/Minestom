@@ -1,6 +1,5 @@
 package net.minestom.server.item.metadata;
 
-import net.minestom.server.MinecraftServer;
 import net.minestom.server.entity.Player;
 import net.minestom.server.entity.PlayerSkin;
 import net.minestom.server.utils.Utils;
@@ -118,7 +117,6 @@ public class PlayerHeadMeta extends ItemMeta {
             }
 
         }
-
     }
 
     /**
@@ -128,15 +126,20 @@ public class PlayerHeadMeta extends ItemMeta {
     public void write(@NotNull NBTCompound compound) {
         NBTCompound skullOwnerCompound = new NBTCompound();
         // Sets the identifier for the skull
-        skullOwnerCompound.setIntArray("Id", Utils.uuidToIntArray(this.skullOwner));
+        if (this.skullOwner != null)
+            skullOwnerCompound.setIntArray("Id", Utils.uuidToIntArray(this.skullOwner));
 
-        if (this.playerSkin == null) {
+        if (this.playerSkin == null && this.skullOwner != null) {
             this.playerSkin = PlayerSkin.fromUuid(this.skullOwner.toString());
         }
 
-        NBTList<NBTCompound> textures = new NBTList<>(NBTTypes.TAG_Compound);
-        textures.add(new NBTCompound().setString("Value", this.playerSkin.getTextures()).setString("Signature", this.playerSkin.getSignature()));
-        skullOwnerCompound.set("Properties", new NBTCompound().set("textures", textures));
+        if (this.playerSkin != null) {
+            NBTList<NBTCompound> textures = new NBTList<>(NBTTypes.TAG_Compound);
+            String value = this.playerSkin.getTextures() == null ? "" : this.playerSkin.getTextures();
+            String signature = this.playerSkin.getSignature() == null ? "" : this.playerSkin.getSignature();
+            textures.add(new NBTCompound().setString("Value", value).setString("Signature", signature));
+            skullOwnerCompound.set("Properties", new NBTCompound().set("textures", textures));
+        }
 
         compound.set("SkullOwner", skullOwnerCompound);
 

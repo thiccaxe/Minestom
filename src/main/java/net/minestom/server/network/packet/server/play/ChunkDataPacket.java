@@ -1,7 +1,6 @@
 package net.minestom.server.network.packet.server.play;
 
 import io.netty.buffer.ByteBuf;
-import io.netty.buffer.Unpooled;
 import it.unimi.dsi.fastutil.ints.Int2ObjectMap;
 import it.unimi.dsi.fastutil.ints.IntOpenHashSet;
 import it.unimi.dsi.fastutil.ints.IntSet;
@@ -10,14 +9,17 @@ import net.minestom.server.data.Data;
 import net.minestom.server.instance.block.BlockManager;
 import net.minestom.server.instance.block.CustomBlock;
 import net.minestom.server.instance.palette.PaletteStorage;
+import net.minestom.server.instance.palette.Section;
 import net.minestom.server.network.packet.server.ServerPacket;
 import net.minestom.server.network.packet.server.ServerPacketIdentifier;
 import net.minestom.server.utils.BlockPosition;
+import net.minestom.server.utils.BufUtils;
 import net.minestom.server.utils.Utils;
 import net.minestom.server.utils.binary.BinaryReader;
 import net.minestom.server.utils.binary.BinaryWriter;
 import net.minestom.server.utils.cache.CacheablePacket;
-import net.minestom.server.utils.cache.TemporaryPacketCache;
+import net.minestom.server.utils.cache.TemporaryCache;
+import net.minestom.server.utils.cache.TimedBuffer;
 import net.minestom.server.utils.chunk.ChunkUtils;
 import net.minestom.server.world.biomes.Biome;
 import org.jetbrains.annotations.NotNull;
@@ -28,11 +30,13 @@ import org.jglrxavpok.hephaistos.nbt.NBTException;
 
 import java.io.IOException;
 import java.util.UUID;
+import java.util.concurrent.TimeUnit;
 
 public class ChunkDataPacket implements ServerPacket, CacheablePacket {
 
     private static final BlockManager BLOCK_MANAGER = MinecraftServer.getBlockManager();
-    private static final TemporaryPacketCache CACHE = new TemporaryPacketCache(10000L);
+    private static final TemporaryCache<TimedBuffer> CACHE = new TemporaryCache<>(5, TimeUnit.MINUTES,
+            notification -> notification.getValue().getBuffer().release());
 
     public boolean fullChunk;
     public Biome[] biomes;
@@ -51,8 +55,8 @@ public class ChunkDataPacket implements ServerPacket, CacheablePacket {
     private static final int MAX_BUFFER_SIZE = (Short.BYTES + Byte.BYTES + 5 * Byte.BYTES + (4096 * MAX_BITS_PER_ENTRY / Long.SIZE * Long.BYTES)) * CHUNK_SECTION_COUNT + 256 * Integer.BYTES;
 
     // Cacheable data
-    private UUID identifier;
-    private long lastUpdate;
+    private final UUID identifier;
+    private final long timestamp;
 
     /**
      * Block entities NBT, as read from raw packet data.
@@ -69,9 +73,9 @@ public class ChunkDataPacket implements ServerPacket, CacheablePacket {
         this(new UUID(0, 0), 0);
     }
 
-    public ChunkDataPacket(@Nullable UUID identifier, long lastUpdate) {
+    public ChunkDataPacket(@Nullable UUID identifier, long timestamp) {
         this.identifier = identifier;
-        this.lastUpdate = lastUpdate;
+        this.timestamp = timestamp;
     }
 
     @Override
@@ -81,18 +85,18 @@ public class ChunkDataPacket implements ServerPacket, CacheablePacket {
         writer.writeBoolean(fullChunk);
 
         int mask = 0;
-        ByteBuf blocks = Unpooled.buffer(MAX_BUFFER_SIZE);
+        ByteBuf blocks = BufUtils.getBuffer(MAX_BUFFER_SIZE);
         for (byte i = 0; i < CHUNK_SECTION_COUNT; i++) {
             if (fullChunk || (sections.length == CHUNK_SECTION_COUNT && sections[i] != 0)) {
-                final long[] section = paletteStorage.getSectionBlocks()[i];
-                if (section.length > 0) { // section contains at least one block
-                    mask |= 1 << i;
-                    Utils.writeBlocks(blocks, paletteStorage.getPalette(i), section, paletteStorage.getBitsPerEntry());
-                } else {
-                    mask |= 0;
+                final Section section = paletteStorage.getSections()[i];
+                if (section == null) {
+                    // Section not loaded
+                    continue;
                 }
-            } else {
-                mask |= 0;
+                if (section.getBlocks().length > 0) { // section contains at least one block
+                    mask |= 1 << i;
+                    Utils.writeSectionBlocks(blocks, section);
+                }
             }
         }
 
@@ -189,8 +193,8 @@ public class ChunkDataPacket implements ServerPacket, CacheablePacket {
                 byte bitsPerEntry = reader.readByte();
 
                 // Resize palette if necessary
-                if (bitsPerEntry > paletteStorage.getBitsPerEntry()) {
-                    paletteStorage.resize(bitsPerEntry);
+                if (bitsPerEntry > paletteStorage.getSections()[section].getBitsPerEntry()) {
+                    paletteStorage.getSections()[section].resize(bitsPerEntry);
                 }
 
                 // Retrieve palette values
@@ -198,18 +202,17 @@ public class ChunkDataPacket implements ServerPacket, CacheablePacket {
                     int paletteSize = reader.readVarInt();
                     for (int i = 0; i < paletteSize; i++) {
                         final int paletteValue = reader.readVarInt();
-                        paletteStorage.getPaletteToBlockMaps()[section].put((short) i, (short) paletteValue);
-                        paletteStorage.getBlockToPaletteMaps()[section].put((short) paletteValue, (short) i);
+                        paletteStorage.getSections()[section].getPaletteBlockMap().put((short) i, (short) paletteValue);
+                        paletteStorage.getSections()[section].getBlockPaletteMap().put((short) paletteValue, (short) i);
                     }
                 }
 
                 // Read blocks
                 int dataLength = reader.readVarInt();
-                long[] data = new long[dataLength];
+                long[] data = paletteStorage.getSections()[section].getBlocks();
                 for (int i = 0; i < dataLength; i++) {
                     data[i] = reader.readLong();
                 }
-                paletteStorage.getSectionBlocks()[section] = data;
             }
 
             // Block entities
@@ -233,7 +236,7 @@ public class ChunkDataPacket implements ServerPacket, CacheablePacket {
 
     @NotNull
     @Override
-    public TemporaryPacketCache getCache() {
+    public TemporaryCache<TimedBuffer> getCache() {
         return CACHE;
     }
 
@@ -243,7 +246,7 @@ public class ChunkDataPacket implements ServerPacket, CacheablePacket {
     }
 
     @Override
-    public long getLastUpdateTime() {
-        return lastUpdate;
+    public long getTimestamp() {
+        return timestamp;
     }
 }

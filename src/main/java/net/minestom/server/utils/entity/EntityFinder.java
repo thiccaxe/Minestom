@@ -1,9 +1,9 @@
 package net.minestom.server.utils.entity;
 
+import it.unimi.dsi.fastutil.objects.Object2BooleanMap;
 import it.unimi.dsi.fastutil.objects.Object2BooleanOpenHashMap;
 import net.minestom.server.MinecraftServer;
 import net.minestom.server.command.CommandSender;
-import net.minestom.server.command.builder.CommandSyntax;
 import net.minestom.server.entity.Entity;
 import net.minestom.server.entity.EntityType;
 import net.minestom.server.entity.GameMode;
@@ -12,6 +12,7 @@ import net.minestom.server.instance.Instance;
 import net.minestom.server.utils.MathUtils;
 import net.minestom.server.utils.Position;
 import net.minestom.server.utils.math.IntRange;
+import net.minestom.server.utils.validate.Check;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
@@ -39,7 +40,11 @@ public class EntityFinder {
     // By traits
     private Integer limit;
     private final ToggleableMap<EntityType> entityTypes = new ToggleableMap<>();
+    private String constantName;
+    private UUID constantUuid;
     private final ToggleableMap<String> names = new ToggleableMap<>();
+    private final ToggleableMap<UUID> uuids = new ToggleableMap<>();
+
 
     // Players specific
     private final ToggleableMap<GameMode> gameModes = new ToggleableMap<>();
@@ -80,8 +85,23 @@ public class EntityFinder {
         return this;
     }
 
+    public EntityFinder setConstantName(@NotNull String constantName) {
+        this.constantName = constantName;
+        return this;
+    }
+
+    public EntityFinder setConstantUuid(@NotNull UUID constantUuid) {
+        this.constantUuid = constantUuid;
+        return this;
+    }
+
     public EntityFinder setName(@NotNull String name, @NotNull ToggleableType toggleableType) {
         this.names.put(name, toggleableType.getValue());
+        return this;
+    }
+
+    public EntityFinder setUuid(@NotNull UUID uuid, @NotNull ToggleableType toggleableType) {
+        this.uuids.put(uuid, toggleableType.getValue());
         return this;
     }
 
@@ -107,6 +127,16 @@ public class EntityFinder {
      */
     @NotNull
     public List<Entity> find(@Nullable Instance instance, @Nullable Entity self) {
+        if (targetSelector == TargetSelector.MINESTOM_USERNAME) {
+            Check.notNull(constantName, "The player name should not be null when searching for it");
+            final Player player = MinecraftServer.getConnectionManager().getPlayer(constantName);
+            return player != null ? Collections.singletonList(player) : Collections.emptyList();
+        } else if (targetSelector == TargetSelector.MINESTOM_UUID) {
+            Check.notNull(constantUuid, "The UUID should not be null when searching for it");
+            final Entity entity = Entity.getEntity(constantUuid);
+            return entity != null ? Collections.singletonList(entity) : Collections.emptyList();
+        }
+
         List<Entity> result = findTarget(instance, targetSelector, startPosition, self);
 
         // Fast exit if there is nothing to process
@@ -149,17 +179,16 @@ public class EntityFinder {
         // Entity type
         if (!entityTypes.isEmpty()) {
             result = result.stream().filter(entity ->
-                    filterToggleableMap(entity, entity.getEntityType(), entityTypes))
+                    filterToggleableMap(entity.getEntityType(), entityTypes))
                     .collect(Collectors.toList());
         }
 
         // GameMode
         if (!gameModes.isEmpty()) {
-            final GameMode requirement = gameModes.requirement;
             result = result.stream().filter(entity -> {
                 if (!(entity instanceof Player))
                     return false;
-                return filterToggleableMap(entity, ((Player) entity).getGameMode(), gameModes);
+                return filterToggleableMap(((Player) entity).getGameMode(), gameModes);
             }).collect(Collectors.toList());
         }
 
@@ -178,12 +207,17 @@ public class EntityFinder {
 
         // Name
         if (!names.isEmpty()) {
-            // TODO entity name
             result = result.stream().filter(entity -> {
                 if (!(entity instanceof Player))
                     return false;
-                return filterToggleableMap(entity, ((Player) entity).getUsername(), names);
+                return filterToggleableMap(((Player) entity).getUsername(), names);
             }).collect(Collectors.toList());
+        }
+
+        // UUID
+        if (!uuids.isEmpty()) {
+            result = result.stream().filter(entity ->
+                    filterToggleableMap(entity.getUuid(), uuids)).collect(Collectors.toList());
         }
 
 
@@ -238,7 +272,7 @@ public class EntityFinder {
      */
     @Nullable
     public Player findFirstPlayer(@Nullable Instance instance, @Nullable Entity self) {
-        List<Entity> entities = find(instance, self);
+        final List<Entity> entities = find(instance, self);
         for (Entity entity : entities) {
             if (entity instanceof Player) {
                 return (Player) entity;
@@ -250,15 +284,34 @@ public class EntityFinder {
     @Nullable
     public Player findFirstPlayer(@NotNull CommandSender sender) {
         if (sender.isPlayer()) {
-            Player player = sender.asPlayer();
+            final Player player = sender.asPlayer();
             return findFirstPlayer(player.getInstance(), player);
         } else {
             return findFirstPlayer(null, null);
         }
     }
 
+    @Nullable
+    public Entity findFirstEntity(@Nullable Instance instance, @Nullable Entity self) {
+        final List<Entity> entities = find(instance, self);
+        for (Entity entity : entities) {
+            return entity;
+        }
+        return null;
+    }
+
+    @Nullable
+    public Entity findFirstEntity(@NotNull CommandSender sender) {
+        if (sender.isPlayer()) {
+            final Player player = sender.asPlayer();
+            return findFirstEntity(player.getInstance(), player);
+        } else {
+            return findFirstEntity(null, null);
+        }
+    }
+
     public enum TargetSelector {
-        NEAREST_PLAYER, RANDOM_PLAYER, ALL_PLAYERS, ALL_ENTITIES, SELF
+        NEAREST_PLAYER, RANDOM_PLAYER, ALL_PLAYERS, ALL_ENTITIES, SELF, MINESTOM_USERNAME, MINESTOM_UUID
     }
 
     public enum EntitySort {
@@ -280,10 +333,6 @@ public class EntityFinder {
     }
 
     private static class ToggleableMap<T> extends Object2BooleanOpenHashMap<T> {
-
-        @Nullable
-        private T requirement;
-
     }
 
     @NotNull
@@ -318,17 +367,20 @@ public class EntityFinder {
         } else if (targetSelector == TargetSelector.SELF) {
             return Collections.singletonList(self);
         }
-        throw new IllegalStateException("Weird thing happened");
+        throw new IllegalStateException("Weird thing happened: " + targetSelector);
     }
 
-    private static <T> boolean filterToggleableMap(@NotNull Entity entity, @NotNull T value, @NotNull ToggleableMap<T> map) {
-        if (!(entity instanceof Player))
-            return false;
+    private static <T> boolean filterToggleableMap(@NotNull T value, @NotNull ToggleableMap<T> map) {
+        for (Object2BooleanMap.Entry<T> entry : map.object2BooleanEntrySet()) {
+            final T key = entry.getKey();
+            final boolean include = entry.getBooleanValue();
 
-        final T requirement = map.requirement;
-        // true if the entity type has not been mentioned or if is accepted
-        return (!map.containsKey(value) && requirement == null) ||
-                Objects.equals(requirement, value) ||
-                map.getBoolean(value);
+            final boolean equals = Objects.equals(value, key);
+            if (include && !equals || !include && equals) {
+                return false;
+            }
+        }
+
+        return true;
     }
 }

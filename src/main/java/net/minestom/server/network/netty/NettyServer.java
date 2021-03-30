@@ -36,6 +36,8 @@ import java.util.concurrent.ScheduledExecutorService;
 public final class NettyServer {
 
     public static final Logger LOGGER = LoggerFactory.getLogger(NettyServer.class);
+    private static final WriteBufferWaterMark SERVER_WRITE_MARK = new WriteBufferWaterMark(1 << 20,
+            1 << 21);
 
     private static final long DEFAULT_COMPRESSED_CHANNEL_WRITE_LIMIT = 600_000L;
     private static final long DEFAULT_COMPRESSED_CHANNEL_READ_LIMIT = 100_000L;
@@ -152,6 +154,7 @@ public final class NettyServer {
 
         bootstrap = new ServerBootstrap()
                 .group(boss, worker)
+                .childOption(ChannelOption.WRITE_BUFFER_WATER_MARK, SERVER_WRITE_MARK)
                 .channel(channel);
 
 
@@ -159,12 +162,14 @@ public final class NettyServer {
             protected void initChannel(@NotNull SocketChannel ch) {
                 ChannelConfig config = ch.config();
                 config.setOption(ChannelOption.TCP_NODELAY, true);
+                config.setOption(ChannelOption.SO_KEEPALIVE, true);
                 config.setOption(ChannelOption.SO_SNDBUF, 262_144);
                 config.setAllocator(ByteBufAllocator.DEFAULT);
 
                 ChannelPipeline pipeline = ch.pipeline();
 
-                pipeline.addLast(TRAFFIC_LIMITER_HANDLER_NAME, globalTrafficHandler);
+                // TODO enable when properly implemented (dynamic limit based on the number of clients)
+                //pipeline.addLast(TRAFFIC_LIMITER_HANDLER_NAME, globalTrafficHandler);
 
                 // First check should verify if the packet is a legacy ping (from 1.6 version and earlier)
                 // Removed from the pipeline later in LegacyPingHandler if unnecessary (>1.6)
@@ -258,13 +263,8 @@ public final class NettyServer {
      * Stops the server and the various services.
      */
     public void stop() {
-        try {
-            this.serverChannel.close().sync();
-            this.worker.shutdownGracefully();
-            this.boss.shutdownGracefully();
-        } catch (InterruptedException e) {
-            MinecraftServer.getExceptionManager().handleException(e);
-        }
+        this.worker.shutdownGracefully();
+        this.boss.shutdownGracefully();
 
         this.trafficScheduler.shutdown();
         this.globalTrafficHandler.release();

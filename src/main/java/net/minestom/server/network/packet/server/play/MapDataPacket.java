@@ -1,6 +1,7 @@
 package net.minestom.server.network.packet.server.play;
 
-import net.minestom.server.chat.JsonMessage;
+import net.kyori.adventure.text.Component;
+import net.minestom.server.network.packet.server.ComponentHoldingServerPacket;
 import net.minestom.server.network.packet.server.ServerPacket;
 import net.minestom.server.network.packet.server.ServerPacketIdentifier;
 import net.minestom.server.utils.binary.BinaryReader;
@@ -9,7 +10,10 @@ import net.minestom.server.utils.binary.Readable;
 import net.minestom.server.utils.binary.Writeable;
 import org.jetbrains.annotations.NotNull;
 
-public class MapDataPacket implements ServerPacket {
+import java.util.*;
+import java.util.function.UnaryOperator;
+
+public class MapDataPacket implements ComponentHoldingServerPacket {
 
     public int mapId;
     public byte scale;
@@ -90,11 +94,49 @@ public class MapDataPacket implements ServerPacket {
         return ServerPacketIdentifier.MAP_DATA;
     }
 
+    @Override
+    public @NotNull Collection<Component> components() {
+        if (icons == null || icons.length == 0) {
+            return Collections.emptyList();
+        } else {
+            List<Component> components = new ArrayList<>();
+            for (Icon icon : icons) {
+                components.add(icon.displayName);
+            }
+            return components;
+        }
+    }
+
+    @Override
+    public @NotNull ServerPacket copyWithOperator(@NotNull UnaryOperator<Component> operator) {
+        if (this.icons == null || this.icons.length == 0) {
+            return this;
+        } else {
+            MapDataPacket packet = new MapDataPacket();
+            packet.mapId = this.mapId;
+            packet.scale = this.scale;
+            packet.trackingPosition = this.trackingPosition;
+            packet.locked = this.locked;
+            packet.columns = this.columns;
+            packet.rows = this.rows;
+            packet.x = this.x;
+            packet.z = this.z;
+            packet.data = this.data;
+
+            packet.icons = Arrays.copyOf(this.icons, this.icons.length);
+            for (Icon icon : packet.icons) {
+                icon.displayName = operator.apply(icon.displayName);
+            }
+
+            return packet;
+        }
+    }
+
     public static class Icon implements Writeable, Readable {
         public int type;
         public byte x, z;
         public byte direction;
-        public JsonMessage displayName; // Only text
+        public Component displayName;
 
         public void write(BinaryWriter writer) {
             writer.writeVarInt(type);
@@ -105,7 +147,7 @@ public class MapDataPacket implements ServerPacket {
             final boolean hasDisplayName = displayName != null;
             writer.writeBoolean(hasDisplayName);
             if (hasDisplayName) {
-                writer.writeSizedString(displayName.toString());
+                writer.writeComponent(displayName);
             }
         }
 
@@ -118,7 +160,7 @@ public class MapDataPacket implements ServerPacket {
 
             boolean hasDisplayName = reader.readBoolean();
             if(hasDisplayName) {
-                displayName = reader.readJsonMessage(Integer.MAX_VALUE);
+                displayName = reader.readComponent(Integer.MAX_VALUE);
             } else {
                 displayName = null;
             }

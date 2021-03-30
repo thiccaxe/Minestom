@@ -1,10 +1,13 @@
 package net.minestom.server.item.metadata;
 
+import net.kyori.adventure.text.format.TextColor;
 import net.minestom.server.chat.ChatColor;
+import net.minestom.server.color.Color;
 import net.minestom.server.potion.CustomPotionEffect;
 import net.minestom.server.potion.PotionType;
 import net.minestom.server.registry.Registries;
 import net.minestom.server.utils.clone.CloneUtils;
+import net.minestom.server.utils.time.TimeUnit;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 import org.jglrxavpok.hephaistos.nbt.NBTCompound;
@@ -28,8 +31,7 @@ public class PotionMeta extends ItemMeta {
     // Not final because of #clone()
     private List<CustomPotionEffect> customPotionEffects = new CopyOnWriteArrayList<>();
 
-    private boolean hasColor;
-    private byte red, green, blue;
+    private Color color;
 
     /**
      * Gets the potion type.
@@ -64,19 +66,20 @@ public class PotionMeta extends ItemMeta {
      * Changes the color of the potion.
      *
      * @param color the new color of the potion
+     * @deprecated Use {@link #setColor(Color)}
      */
+    @Deprecated
     public void setColor(ChatColor color) {
-        // FIXME: weird usage of ChatColor, should maybe rename
+        this.setColor(color.asColor());
+    }
 
-        if (color == null) {
-            this.hasColor = false;
-            return;
-        }
-
-        this.red = color.getRed();
-        this.green = color.getGreen();
-        this.blue = color.getBlue();
-        this.hasColor = true;
+    /**
+     * Changes the color of the potion.
+     *
+     * @param color the new color of the potion
+     */
+    public void setColor(@Nullable Color color) {
+        this.color = color;
     }
 
     @Override
@@ -92,10 +95,7 @@ public class PotionMeta extends ItemMeta {
         PotionMeta potionMeta = (PotionMeta) itemMeta;
         return potionMeta.potionType == potionType &&
                 potionMeta.customPotionEffects.equals(customPotionEffects) &&
-                potionMeta.hasColor == hasColor &&
-                potionMeta.red == red &&
-                potionMeta.green == green &&
-                potionMeta.blue == blue;
+                potionMeta.color.equals(color);
     }
 
     @Override
@@ -109,10 +109,10 @@ public class PotionMeta extends ItemMeta {
             for (NBTCompound potionCompound : customEffectList) {
                 final byte id = potionCompound.getAsByte("Id");
                 final byte amplifier = potionCompound.getAsByte("Amplifier");
-                final int duration = potionCompound.getAsInt("Duration");
-                final boolean ambient = potionCompound.getAsByte("Ambient") == 1;
-                final boolean showParticles = potionCompound.getAsByte("ShowParticles") == 1;
-                final boolean showIcon = potionCompound.getAsByte("ShowIcon") == 1;
+                final int duration = potionCompound.containsKey("Duration") ? potionCompound.getNumber("Duration").intValue() : (int) TimeUnit.SECOND.toMilliseconds(30);
+                final boolean ambient = potionCompound.containsKey("Ambient") ? potionCompound.getAsByte("Ambient") == 1 : false;
+                final boolean showParticles = potionCompound.containsKey("ShowParticles") ? potionCompound.getAsByte("ShowParticles") == 1 : true;
+                final boolean showIcon = potionCompound.containsKey("ShowIcon") ? potionCompound.getAsByte("ShowIcon") == 1 : true;
 
                 this.customPotionEffects.add(
                         new CustomPotionEffect(id, amplifier, duration, ambient, showParticles, showIcon));
@@ -120,10 +120,7 @@ public class PotionMeta extends ItemMeta {
         }
 
         if (compound.containsKey("CustomPotionColor")) {
-            final int color = compound.getInt("CustomPotionColor");
-            this.red = (byte) ((color >> 16) & 0x000000FF);
-            this.green = (byte) ((color >> 8) & 0x000000FF);
-            this.blue = (byte) ((color) & 0x000000FF);
+            this.color = new Color(compound.getInt("CustomPotionColor"));
         }
     }
 
@@ -150,9 +147,8 @@ public class PotionMeta extends ItemMeta {
             compound.set("CustomPotionEffects", potionList);
         }
 
-        if (hasColor) {
-            final int color = red << 16 + green << 8 + blue;
-            compound.setInt("CustomPotionColor", color);
+        if (color != null) {
+            compound.setInt("CustomPotionColor", color.asRGB());
         }
 
     }
@@ -164,10 +160,7 @@ public class PotionMeta extends ItemMeta {
         potionMeta.potionType = potionType;
         potionMeta.customPotionEffects = CloneUtils.cloneCopyOnWriteArrayList(customPotionEffects);
 
-        potionMeta.hasColor = hasColor;
-        potionMeta.red = red;
-        potionMeta.green = green;
-        potionMeta.blue = blue;
+        potionMeta.color = color;
 
         return potionMeta;
     }

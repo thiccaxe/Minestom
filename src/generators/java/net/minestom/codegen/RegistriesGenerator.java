@@ -1,6 +1,7 @@
 package net.minestom.codegen;
 
 import com.squareup.javapoet.*;
+import net.kyori.adventure.key.Key;
 import net.minestom.server.entity.EntityType;
 import net.minestom.server.fluids.Fluid;
 import net.minestom.server.instance.block.Block;
@@ -10,7 +11,7 @@ import net.minestom.server.particle.Particle;
 import net.minestom.server.potion.PotionEffect;
 import net.minestom.server.potion.PotionType;
 import net.minestom.server.registry.ResourceGatherer;
-import net.minestom.server.sound.Sound;
+import net.minestom.server.sound.SoundEvent;
 import net.minestom.server.stat.StatisticType;
 import net.minestom.server.utils.NamespaceID;
 import org.apache.commons.lang3.tuple.ImmutablePair;
@@ -20,7 +21,8 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import javax.lang.model.element.Modifier;
-import java.io.*;
+import java.io.File;
+import java.io.IOException;
 import java.lang.annotation.Annotation;
 import java.util.Collections;
 import java.util.HashMap;
@@ -39,11 +41,11 @@ public class RegistriesGenerator implements CodeGenerator {
             new ImmutablePair<>(Block.class.getCanonicalName(), "AIR"),
             new ImmutablePair<>(Material.class.getCanonicalName(), "AIR"),
             new ImmutablePair<>(Enchantment.class.getCanonicalName(), null),
-            new ImmutablePair<>(EntityType.class.getCanonicalName(), "PIG"),
+            new ImmutablePair<>(EntityType.class.getCanonicalName(), null),
             new ImmutablePair<>(Particle.class.getCanonicalName(), null),
             new ImmutablePair<>(PotionType.class.getCanonicalName(), null),
             new ImmutablePair<>(PotionEffect.class.getCanonicalName(), null),
-            new ImmutablePair<>(Sound.class.getCanonicalName(), null),
+            new ImmutablePair<>(SoundEvent.class.getCanonicalName(), null),
             new ImmutablePair<>(StatisticType.class.getCanonicalName(), null),
             new ImmutablePair<>(Fluid.class.getCanonicalName(), "EMPTY"),
     };
@@ -61,7 +63,7 @@ public class RegistriesGenerator implements CodeGenerator {
             ClassName type = ClassName.bestGuess(registries[i].left);
             String simpleType = type.simpleName();
 
-            FieldSpec field = FieldSpec.builder(ParameterizedTypeName.get(ClassName.get(HashMap.class), ClassName.get(NamespaceID.class), type), CodeGenerator.decapitalize(simpleType)+"s")
+            FieldSpec field = FieldSpec.builder(ParameterizedTypeName.get(ClassName.get(HashMap.class), ClassName.get(NamespaceID.class), type), CodeGenerator.decapitalize(simpleType) + "s")
                     .addModifiers(Modifier.FINAL, Modifier.STATIC, Modifier.PUBLIC)
                     .addJavadoc("Should only be used for internal code, please use the get* methods.")
                     .addAnnotation(Deprecated.class)
@@ -100,10 +102,11 @@ public class RegistriesGenerator implements CodeGenerator {
 
             ParameterSpec namespaceIDParam = ParameterSpec.builder(ClassName.get(NamespaceID.class), "id")
                     .build();
+            ParameterSpec keyIDParam = ParameterSpec.builder(ClassName.get(Key.class), "key").build();
 
             CodeBlock.Builder code = CodeBlock.builder();
             Class<? extends Annotation> annotation;
-            if(defaultValue != null) {
+            if (defaultValue != null) {
                 annotation = NotNull.class;
                 code.addStatement("return $N.getOrDefault($N, $T.$N)", fields[i], namespaceIDParam, type, defaultValue);
             } else {
@@ -114,7 +117,7 @@ public class RegistriesGenerator implements CodeGenerator {
             // string variant
             ParameterSpec idParam = ParameterSpec.builder(ClassName.get(String.class), "id")
                     .build();
-            MethodSpec idMethod = MethodSpec.methodBuilder("get"+simpleType)
+            MethodSpec idMethod = MethodSpec.methodBuilder("get" + simpleType)
                     .returns(type)
                     .addAnnotation(annotation)
                     .addModifiers(Modifier.STATIC, Modifier.PUBLIC)
@@ -125,7 +128,7 @@ public class RegistriesGenerator implements CodeGenerator {
             registriesClass.addMethod(idMethod);
 
             // NamespaceID variant
-            registriesClass.addMethod(MethodSpec.methodBuilder("get"+simpleType)
+            registriesClass.addMethod(MethodSpec.methodBuilder("get" + simpleType)
                     .returns(type)
                     .addAnnotation(annotation)
                     .addModifiers(Modifier.STATIC, Modifier.PUBLIC)
@@ -133,10 +136,20 @@ public class RegistriesGenerator implements CodeGenerator {
                     .addCode(code.build())
                     .addJavadoc(comment.toString())
                     .build());
+
+            // Key variant
+            registriesClass.addMethod(MethodSpec.methodBuilder("get" + simpleType)
+                    .returns(type)
+                    .addAnnotation(annotation)
+                    .addModifiers(Modifier.STATIC, Modifier.PUBLIC)
+                    .addParameter(keyIDParam)
+                    .addStatement("return get$N(NamespaceID.from($N))", simpleType, keyIDParam)
+                    .addJavadoc(comment.toString().replace(" id.", " key."))
+                    .build());
         }
 
         JavaFile file = JavaFile.builder("net.minestom.server.registry", registriesClass.build())
-                .addFileComment("AUTOGENERATED by "+getClass().getCanonicalName())
+                .addFileComment("AUTOGENERATED by " + getClass().getCanonicalName())
                 .indent("    ")
                 .skipJavaLangImports(true)
                 .build();

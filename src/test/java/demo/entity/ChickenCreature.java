@@ -1,43 +1,44 @@
 package demo.entity;
 
-import net.minestom.server.attribute.Attributes;
+import com.google.common.collect.ImmutableList;
+import net.minestom.server.attribute.Attribute;
+import net.minestom.server.entity.EntityCreature;
+import net.minestom.server.entity.EntityType;
 import net.minestom.server.entity.LivingEntity;
 import net.minestom.server.entity.ai.goal.RandomStrollGoal;
 import net.minestom.server.entity.damage.DamageType;
-import net.minestom.server.entity.type.animal.EntityChicken;
 import net.minestom.server.event.entity.EntityAttackEvent;
-import net.minestom.server.utils.Position;
 import net.minestom.server.utils.Vector;
 
-public class ChickenCreature extends EntityChicken {
+public class ChickenCreature extends EntityCreature {
 
-    public ChickenCreature(Position defaultPosition) {
-        super(defaultPosition);
+    public ChickenCreature() {
+        super(EntityType.CHICKEN);
 
-        //goalSelectors.add(new DoNothingGoal(this, 500, 0.1f));
-        //goalSelectors.add(new MeleeAttackGoal(this, 500, TimeUnit.MILLISECOND));
-        goalSelectors.add(new RandomStrollGoal(this, 2));
-        /*goalSelectors.add(new EatBlockGoal(this,
-                new HashMap<>() {
-                    {
-                        put(Block.GRASS.getBlockId(), Block.AIR.getBlockId());
-                    }
-                },
-                new HashMap<>() {
-                    {
-                        put(Block.GRASS_BLOCK.getBlockId(), Block.DIRT.getBlockId());
-                    }
-                },
-                100))
-        ;
-        //goalSelectors.add(new FollowTargetGoal(this));*/
+        addAIGroup(
+                ImmutableList.of(
+//                        new DoNothingGoal(this, 500, 0.1f),
+//                        new MeleeAttackGoal(this, 500, 2, TimeUnit.MILLISECOND),
+                        new RandomStrollGoal(this, 2)
+                ),
+                ImmutableList.of(
+//                        new LastEntityDamagerTarget(this, 15),
+//                        new ClosestEntityTarget(this, 15, LivingEntity.class)
+                )
+        );
 
+        // Another way to register previously added EntityAIGroup, using specialized builder:
+//        addAIGroup(
+//                new EntityAIGroupBuilder()
+//                        .addGoalSelector(new DoNothingGoal(this, 500, .1F))
+//                        .addGoalSelector(new MeleeAttackGoal(this, 500, 2, TimeUnit.MILLISECOND))
+//                        .addGoalSelector(new RandomStrollGoal(this, 2))
+//                        .addTargetSelector(new LastEntityDamagerTarget(this, 15))
+//                        .addTargetSelector(new ClosestEntityTarget(this, 15, LivingEntity.class))
+//                        .build()
+//        );
 
-        //targetSelectors.add(new LastEntityDamagerTarget(this, 15));
-        //targetSelectors.add(new ClosestEntityTarget(this, 15, LivingEntity.class));
-
-
-        getAttribute(Attributes.MOVEMENT_SPEED).setBaseValue(0.1f);
+        getAttribute(Attribute.MOVEMENT_SPEED).setBaseValue(0.1f);
 
         addEventCallback(EntityAttackEvent.class, event -> {
             //System.out.println("CALL ATTACK");

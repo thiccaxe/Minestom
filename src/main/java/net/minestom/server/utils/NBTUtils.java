@@ -1,11 +1,13 @@
 package net.minestom.server.utils;
 
+import net.kyori.adventure.nbt.api.BinaryTagHolder;
+import net.kyori.adventure.text.Component;
+import net.kyori.adventure.text.serializer.gson.GsonComponentSerializer;
+import net.kyori.adventure.util.Codec;
 import net.minestom.server.MinecraftServer;
+import net.minestom.server.adventure.AdventureSerializer;
 import net.minestom.server.attribute.Attribute;
 import net.minestom.server.attribute.AttributeOperation;
-import net.minestom.server.chat.ChatParser;
-import net.minestom.server.chat.ColoredText;
-import net.minestom.server.chat.JsonMessage;
 import net.minestom.server.data.Data;
 import net.minestom.server.data.DataType;
 import net.minestom.server.inventory.Inventory;
@@ -19,6 +21,7 @@ import net.minestom.server.registry.Registries;
 import net.minestom.server.utils.binary.BinaryReader;
 import net.minestom.server.utils.binary.BinaryWriter;
 import net.minestom.server.utils.validate.Check;
+import org.jetbrains.annotations.Contract;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 import org.jglrxavpok.hephaistos.nbt.*;
@@ -26,18 +29,35 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Map;
-import java.util.UUID;
+import java.io.StringReader;
+import java.util.*;
 
 // for lack of a better name
 public final class NBTUtils {
-
     private final static Logger LOGGER = LoggerFactory.getLogger(NBTUtils.class);
+
+    /**
+     * An Adventure codec to convert between NBT and SNBT.
+     */
+    public static final Codec<NBT, String, NBTException, RuntimeException> SNBT_CODEC
+            = Codec.of(encoded -> new SNBTParser(new StringReader(encoded)).parse(), NBT::toSNBT);
 
     private NBTUtils() {
 
+    }
+
+    /**
+     * Turns an {@link NBTCompound} into an Adventure {@link BinaryTagHolder}.
+     * @param tag the tag, if any
+     * @return the binary tag holder, or {@code null} if the tag was null
+     */
+    @Contract("null -> null; !null -> !null")
+    public static BinaryTagHolder asBinaryTagHolder(@Nullable NBTCompound tag) {
+        if (tag == null) {
+            return null;
+        }
+
+        return BinaryTagHolder.encode(tag, SNBT_CODEC);
     }
 
     /**
@@ -124,22 +144,23 @@ public final class NBTUtils {
         return item;
     }
 
+    @SuppressWarnings("ConstantConditions")
     public static void loadDataIntoItem(@NotNull ItemStack item, @NotNull NBTCompound nbt) {
         if (nbt.containsKey("Damage")) item.setDamage(nbt.getInt("Damage"));
-        if (nbt.containsKey("Unbreakable")) item.setUnbreakable(nbt.getInt("Unbreakable") == 1);
+        if (nbt.containsKey("Unbreakable")) item.setUnbreakable(nbt.getAsByte("Unbreakable") == 1);
         if (nbt.containsKey("HideFlags")) item.setHideFlag(nbt.getInt("HideFlags"));
         if (nbt.containsKey("display")) {
             final NBTCompound display = nbt.getCompound("display");
             if (display.containsKey("Name")) {
                 final String rawName = display.getString("Name");
-                final ColoredText displayName = ChatParser.toColoredText(rawName);
+                final Component displayName = GsonComponentSerializer.gson().deserialize(rawName);
                 item.setDisplayName(displayName);
             }
             if (display.containsKey("Lore")) {
                 NBTList<NBTString> loreList = display.getList("Lore");
-                List<JsonMessage> lore = new ArrayList<>();
+                List<Component> lore = new ArrayList<>();
                 for (NBTString s : loreList) {
-                    lore.add(ChatParser.toColoredText(s.getValue()));
+                    lore.add(GsonComponentSerializer.gson().deserialize(s.getValue()));
                 }
                 item.setLore(lore);
             }
@@ -159,10 +180,11 @@ public final class NBTUtils {
                     final int[] uuidArray = attributeNBT.getIntArray("UUID");
                     uuid = Utils.intArrayToUuid(uuidArray);
                 }
-                final double value = attributeNBT.getDouble("Amount");
-                final String slot = attributeNBT.getString("Slot");
+
+                final double value = attributeNBT.getAsDouble("Amount");
+                final String slot = attributeNBT.containsKey("Slot") ? attributeNBT.getString("Slot") : "MAINHAND";
                 final String attributeName = attributeNBT.getString("AttributeName");
-                final int operation = attributeNBT.getInt("Operation");
+                final int operation = attributeNBT.getAsInt("Operation");
                 final String name = attributeNBT.getString("Name");
 
                 final Attribute attribute = Attribute.fromKey(attributeName);
@@ -174,10 +196,13 @@ public final class NBTUtils {
                 if (attributeOperation == null) {
                     break;
                 }
-                final AttributeSlot attributeSlot = AttributeSlot.valueOf(slot.toUpperCase());
-                // Wrong attribute slot, stop here
-                if (attributeSlot == null) {
-                    break;
+
+                // Find slot, default to the main hand if the nbt tag is invalid
+                AttributeSlot attributeSlot;
+                try {
+                    attributeSlot = AttributeSlot.valueOf(slot.toUpperCase());
+                } catch (IllegalArgumentException e) {
+                    attributeSlot = AttributeSlot.MAINHAND;
                 }
 
                 // Add attribute
@@ -216,6 +241,21 @@ public final class NBTUtils {
                 if (data != null) {
                     item.setData(data);
                 }
+            }
+        }
+
+        //CanPlaceOn
+        {
+            if (nbt.containsKey("CanPlaceOn")) {
+                NBTList<NBTString> canPlaceOn = nbt.getList("CanPlaceOn");
+                canPlaceOn.forEach(x -> item.getCanPlaceOn().add(x.getValue()));
+            }
+        }
+        //CanDestroy
+        {
+            if (nbt.containsKey("CanDestroy")) {
+                NBTList<NBTString> canPlaceOn = nbt.getList("CanDestroy");
+                canPlaceOn.forEach(x -> item.getCanDestroy().add(x.getValue()));
             }
         }
     }
@@ -278,16 +318,16 @@ public final class NBTUtils {
         if (hasDisplayName || hasLore) {
             NBTCompound displayNBT = new NBTCompound();
             if (hasDisplayName) {
-                final String name = itemStack.getDisplayName().toString();
+                final String name = AdventureSerializer.serialize(itemStack.getDisplayName());
                 displayNBT.setString("Name", name);
             }
 
             if (hasLore) {
-                final List<JsonMessage> lore = itemStack.getLore();
+                final List<Component> lore = itemStack.getLore();
 
                 final NBTList<NBTString> loreNBT = new NBTList<>(NBTTypes.TAG_String);
-                for (JsonMessage line : lore) {
-                    loreNBT.add(new NBTString(line.toString()));
+                for (Component line : lore) {
+                    loreNBT.add(new NBTString(GsonComponentSerializer.gson().serialize(line)));
                 }
                 displayNBT.set("Lore", loreNBT);
             }
@@ -364,6 +404,26 @@ public final class NBTUtils {
             }
         }
         // End ownership
+
+        //CanDestroy
+        {
+            Set<String> canDestroy = itemStack.getCanDestroy();
+            if (canDestroy.size() > 0) {
+                NBTList<NBTString> list = new NBTList<>(NBTTypes.TAG_String);
+                canDestroy.forEach(x -> list.add(new NBTString(x)));
+                itemNBT.set("CanDestroy", list);
+            }
+        }
+
+        //CanDestroy
+        {
+            Set<String> canPlaceOn = itemStack.getCanPlaceOn();
+            if (canPlaceOn.size() > 0) {
+                NBTList<NBTString> list = new NBTList<>(NBTTypes.TAG_String);
+                canPlaceOn.forEach(x -> list.add(new NBTString(x)));
+                itemNBT.set("CanPlaceOn", list);
+            }
+        }
     }
 
     /**

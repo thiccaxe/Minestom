@@ -1,9 +1,13 @@
 package net.minestom.server.command.builder.arguments;
 
+import com.google.common.annotations.Beta;
 import net.minestom.server.command.builder.ArgumentCallback;
 import net.minestom.server.command.builder.Command;
 import net.minestom.server.command.builder.CommandExecutor;
+import net.minestom.server.command.builder.NodeMaker;
 import net.minestom.server.command.builder.exception.ArgumentSyntaxException;
+import net.minestom.server.command.builder.suggestion.SuggestionCallback;
+import net.minestom.server.network.packet.server.play.DeclareCommandsPacket;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
@@ -19,12 +23,14 @@ import org.jetbrains.annotations.Nullable;
 public abstract class Argument<T> {
 
     private final String id;
-    private final boolean allowSpace;
-    private final boolean useRemaining;
+    protected final boolean allowSpace;
+    protected final boolean useRemaining;
 
     private ArgumentCallback callback;
 
     private T defaultValue;
+
+    private SuggestionCallback suggestionCallback;
 
     /**
      * Creates a new argument.
@@ -70,8 +76,34 @@ public abstract class Argument<T> {
     public abstract T parse(@NotNull String input) throws ArgumentSyntaxException;
 
     /**
+     * Turns the argument into a list of nodes for command dispatching. Make sure to set the Node's parser.
+     *
+     * @param nodeMaker  helper object used to create and modify nodes
+     * @param executable true if this will be the last argument, false otherwise
+     */
+    public abstract void processNodes(@NotNull NodeMaker nodeMaker, boolean executable);
+
+    /**
+     * Builds an argument node.
+     *
+     * @param argument   the argument
+     * @param executable true if this will be the last argument, false otherwise
+     * @return the created {@link DeclareCommandsPacket.Node}
+     */
+    @NotNull
+    protected static DeclareCommandsPacket.Node simpleArgumentNode(@NotNull Argument<?> argument,
+                                                                   boolean executable, boolean redirect, boolean suggestion) {
+        DeclareCommandsPacket.Node argumentNode = new DeclareCommandsPacket.Node();
+
+        argumentNode.flags = DeclareCommandsPacket.getFlag(DeclareCommandsPacket.NodeType.ARGUMENT, executable, redirect, suggestion);
+        argumentNode.name = argument.getId();
+
+        return argumentNode;
+    }
+
+    /**
      * Gets the ID of the argument, showed in-game above the chat bar
-     * and used to retrieve the data when the command is parsed in {@link net.minestom.server.command.builder.Arguments}.
+     * and used to retrieve the data when the command is parsed in {@link net.minestom.server.command.builder.CommandContext}.
      *
      * @return the argument id
      */
@@ -121,6 +153,15 @@ public abstract class Argument<T> {
     }
 
     /**
+     * Gets if the argument has any error callback.
+     *
+     * @return true if the argument has an error callback, false otherwise
+     */
+    public boolean hasErrorCallback() {
+        return callback != null;
+    }
+
+    /**
      * Gets if this argument is 'optional'.
      * <p>
      * Optional means that this argument can be put at the end of a syntax
@@ -157,13 +198,33 @@ public abstract class Argument<T> {
         return this;
     }
 
-    /**
-     * Gets if the argument has any error callback.
-     *
-     * @return true if the argument has an error callback, false otherwise
-     */
-    public boolean hasErrorCallback() {
-        return callback != null;
+    @Nullable
+    public SuggestionCallback getSuggestionCallback() {
+        return suggestionCallback;
     }
 
+    @Beta
+    public Argument<T> setSuggestionCallback(@NotNull SuggestionCallback suggestionCallback) {
+        this.suggestionCallback = suggestionCallback;
+        return this;
+    }
+
+    public boolean hasSuggestion() {
+        return suggestionCallback != null;
+    }
+
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) return true;
+        if (o == null || getClass() != o.getClass()) return false;
+
+        Argument<?> argument = (Argument<?>) o;
+
+        return id.equals(argument.id);
+    }
+
+    @Override
+    public int hashCode() {
+        return id.hashCode();
+    }
 }

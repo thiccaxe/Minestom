@@ -5,18 +5,20 @@ import net.minestom.server.network.packet.server.ServerPacketIdentifier;
 import net.minestom.server.utils.binary.BinaryReader;
 import net.minestom.server.utils.binary.BinaryWriter;
 import net.minestom.server.utils.cache.CacheablePacket;
-import net.minestom.server.utils.cache.TemporaryPacketCache;
+import net.minestom.server.utils.cache.TemporaryCache;
+import net.minestom.server.utils.cache.TimedBuffer;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
 import java.util.ArrayList;
-import java.util.LinkedList;
 import java.util.List;
 import java.util.UUID;
+import java.util.concurrent.TimeUnit;
 
 public class UpdateLightPacket implements ServerPacket, CacheablePacket {
 
-    private static final TemporaryPacketCache CACHE = new TemporaryPacketCache(10000L);
+    private static final TemporaryCache<TimedBuffer> CACHE = new TemporaryCache<>(5, TimeUnit.MINUTES,
+            notification -> notification.getValue().getBuffer().release());
 
     public int chunkX;
     public int chunkZ;
@@ -33,8 +35,8 @@ public class UpdateLightPacket implements ServerPacket, CacheablePacket {
     public List<byte[]> blockLight;
 
     // Cacheable data
-    private UUID identifier;
-    private long lastUpdate;
+    private final UUID identifier;
+    private final long timestamp;
 
     /**
      * Default constructor, required for reflection operations.
@@ -50,9 +52,9 @@ public class UpdateLightPacket implements ServerPacket, CacheablePacket {
         }
     }
 
-    public UpdateLightPacket(@Nullable UUID identifier, long lastUpdate) {
+    public UpdateLightPacket(@Nullable UUID identifier, long timestamp) {
         this.identifier = identifier;
-        this.lastUpdate = lastUpdate;
+        this.timestamp = timestamp;
         skyLight = new ArrayList<>(14);
         blockLight = new ArrayList<>(6);
     }
@@ -128,7 +130,7 @@ public class UpdateLightPacket implements ServerPacket, CacheablePacket {
 
     @NotNull
     @Override
-    public TemporaryPacketCache getCache() {
+    public TemporaryCache<TimedBuffer> getCache() {
         return CACHE;
     }
 
@@ -138,7 +140,7 @@ public class UpdateLightPacket implements ServerPacket, CacheablePacket {
     }
 
     @Override
-    public long getLastUpdateTime() {
-        return lastUpdate;
+    public long getTimestamp() {
+        return timestamp;
     }
 }

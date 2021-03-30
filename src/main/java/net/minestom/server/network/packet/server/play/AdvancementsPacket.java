@@ -1,9 +1,11 @@
 package net.minestom.server.network.packet.server.play;
 
+import net.kyori.adventure.text.Component;
 import net.minestom.server.advancements.FrameType;
 import net.minestom.server.chat.ColoredText;
 import net.minestom.server.chat.JsonMessage;
 import net.minestom.server.item.ItemStack;
+import net.minestom.server.network.packet.server.ComponentHoldingServerPacket;
 import net.minestom.server.network.packet.server.ServerPacket;
 import net.minestom.server.network.packet.server.ServerPacketIdentifier;
 import net.minestom.server.utils.binary.BinaryReader;
@@ -12,7 +14,13 @@ import net.minestom.server.utils.binary.Readable;
 import net.minestom.server.utils.binary.Writeable;
 import org.jetbrains.annotations.NotNull;
 
-public class AdvancementsPacket implements ServerPacket {
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collection;
+import java.util.List;
+import java.util.function.UnaryOperator;
+
+public class AdvancementsPacket implements ComponentHoldingServerPacket {
 
     public boolean resetAdvancements;
     public AdvancementMapping[] advancementMappings = new AdvancementMapping[0];
@@ -61,6 +69,32 @@ public class AdvancementsPacket implements ServerPacket {
     @Override
     public int getId() {
         return ServerPacketIdentifier.ADVANCEMENTS;
+    }
+
+    @Override
+    public @NotNull Collection<Component> components() {
+        List<Component> components = new ArrayList<>();
+        for (AdvancementMapping advancementMapping : advancementMappings) {
+            components.add(advancementMapping.value.displayData.title);
+            components.add(advancementMapping.value.displayData.description);
+        }
+        return components;
+    }
+
+    @Override
+    public @NotNull ServerPacket copyWithOperator(@NotNull UnaryOperator<Component> operator) {
+        AdvancementsPacket packet = new AdvancementsPacket();
+        packet.resetAdvancements = this.resetAdvancements;
+        packet.advancementMappings = Arrays.copyOf(this.advancementMappings, this.advancementMappings.length);
+        packet.identifiersToRemove = Arrays.copyOf(this.identifiersToRemove, this.identifiersToRemove.length);
+        packet.progressMappings = Arrays.copyOf(this.progressMappings, this.progressMappings.length);
+
+        for (AdvancementMapping advancementMapping : packet.advancementMappings) {
+            advancementMapping.value.displayData.title = operator.apply(advancementMapping.value.displayData.title);
+            advancementMapping.value.displayData.description = operator.apply(advancementMapping.value.displayData.title);
+        }
+
+        return packet;
     }
 
     /**
@@ -143,8 +177,8 @@ public class AdvancementsPacket implements ServerPacket {
     }
 
     public static class DisplayData implements Writeable, Readable {
-        public JsonMessage title = ColoredText.of(""); // Only text
-        public JsonMessage description = ColoredText.of(""); // Only text
+        public Component title = Component.empty(); // Only text
+        public Component description = Component.empty(); // Only text
         public ItemStack icon = ItemStack.getAirItem();
         public FrameType frameType = FrameType.TASK;
         public int flags;
@@ -154,8 +188,8 @@ public class AdvancementsPacket implements ServerPacket {
 
         @Override
         public void write(@NotNull BinaryWriter writer) {
-            writer.writeSizedString(title.toString());
-            writer.writeSizedString(description.toString());
+            writer.writeComponent(title);
+            writer.writeComponent(description);
             writer.writeItemStack(icon);
             writer.writeVarInt(frameType.ordinal());
             writer.writeInt(flags);
@@ -168,8 +202,8 @@ public class AdvancementsPacket implements ServerPacket {
 
         @Override
         public void read(@NotNull BinaryReader reader) {
-            title = reader.readJsonMessage(Integer.MAX_VALUE);
-            description = reader.readJsonMessage(Integer.MAX_VALUE);
+            title = reader.readComponent(Integer.MAX_VALUE);
+            description = reader.readComponent(Integer.MAX_VALUE);
             icon = reader.readItemStack();
             frameType = FrameType.values()[reader.readVarInt()];
             flags = reader.readInt();

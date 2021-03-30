@@ -1,8 +1,12 @@
 package net.minestom.server.command.builder.arguments;
 
 import net.minestom.server.command.CommandSender;
+import net.minestom.server.command.builder.NodeMaker;
 import net.minestom.server.command.builder.arguments.minecraft.SuggestionType;
 import net.minestom.server.command.builder.exception.ArgumentSyntaxException;
+import net.minestom.server.command.builder.suggestion.SuggestionCallback;
+import net.minestom.server.network.packet.server.play.DeclareCommandsPacket;
+import net.minestom.server.utils.binary.BinaryWriter;
 import net.minestom.server.utils.callback.validator.StringValidator;
 import org.apache.commons.lang3.StringUtils;
 import org.jetbrains.annotations.NotNull;
@@ -12,7 +16,10 @@ import org.jetbrains.annotations.Nullable;
  * Same as {@link ArgumentWord} with the exception
  * that this argument can trigger {@link net.minestom.server.command.builder.Command#onDynamicWrite(CommandSender, String)}
  * when the suggestion type is {@link SuggestionType#ASK_SERVER}, or any other suggestions available in the enum.
+ *
+ * @deprecated Use {@link Argument#setSuggestionCallback(SuggestionCallback)} with any argument type you want
  */
+@Deprecated
 public class ArgumentDynamicWord extends Argument<String> {
 
     public static final int SPACE_ERROR = 1;
@@ -43,6 +50,21 @@ public class ArgumentDynamicWord extends Argument<String> {
         return input;
     }
 
+    @Override
+    public void processNodes(@NotNull NodeMaker nodeMaker, boolean executable) {
+        DeclareCommandsPacket.Node argumentNode = simpleArgumentNode(this, executable, false, true);
+
+        final SuggestionType suggestionType = this.getSuggestionType();
+
+        argumentNode.parser = "brigadier:string";
+        argumentNode.properties = BinaryWriter.makeArray(packetWriter -> {
+            packetWriter.writeVarInt(0); // Single word
+        });
+        argumentNode.suggestionsType = suggestionType.getIdentifier();
+
+        nodeMaker.addNodes(new DeclareCommandsPacket.Node[]{argumentNode});
+    }
+
     /**
      * Gets the suggestion type of this argument.
      * <p>
@@ -63,6 +85,7 @@ public class ArgumentDynamicWord extends Argument<String> {
      * @param dynamicRestriction the dynamic restriction, can be null to disable
      * @return 'this' for chaining
      */
+    @NotNull
     public ArgumentDynamicWord fromRestrictions(@Nullable StringValidator dynamicRestriction) {
         this.dynamicRestriction = dynamicRestriction;
         return this;

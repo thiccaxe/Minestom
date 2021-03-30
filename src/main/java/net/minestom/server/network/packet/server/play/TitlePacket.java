@@ -1,21 +1,27 @@
 package net.minestom.server.network.packet.server.play;
 
-import net.minestom.server.chat.JsonMessage;
+import net.kyori.adventure.text.Component;
+import net.kyori.adventure.title.Title;
+import net.minestom.server.network.packet.server.ComponentHoldingServerPacket;
 import net.minestom.server.network.packet.server.ServerPacket;
 import net.minestom.server.network.packet.server.ServerPacketIdentifier;
+import net.minestom.server.utils.TickUtils;
 import net.minestom.server.utils.binary.BinaryReader;
 import net.minestom.server.utils.binary.BinaryWriter;
+import org.apache.commons.lang3.Validate;
 import org.jetbrains.annotations.NotNull;
 
-public class TitlePacket implements ServerPacket {
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.Collections;
+import java.util.List;
+import java.util.function.UnaryOperator;
+
+public class TitlePacket implements ComponentHoldingServerPacket {
 
     public Action action;
 
-    public JsonMessage titleText; // Only text
-
-    public JsonMessage subtitleText; // Only text
-
-    public JsonMessage actionBarText; // Only text
+    public Component payload;
 
     public int fadeIn;
     public int stay;
@@ -25,7 +31,46 @@ public class TitlePacket implements ServerPacket {
      * Default constructor, required for reflection operations.
      */
     public TitlePacket() {
-        action = Action.RESET;
+        this(Action.SET_TITLE, Component.empty());
+    }
+
+    /**
+     * Constructs a new title packet from an action that can take a component argument.
+     *
+     * @param action the action
+     * @param payload the payload
+     * @throws IllegalArgumentException if the action is not {@link Action#SET_TITLE},
+     * {@link Action#SET_SUBTITLE} or {@link Action#SET_ACTION_BAR}
+     */
+    public TitlePacket(@NotNull Action action, @NotNull Component payload) {
+        Validate.isTrue(action == Action.SET_TITLE || action == Action.SET_SUBTITLE || action == Action.SET_ACTION_BAR, "Invalid action type");
+        this.action = action;
+        this.payload = payload;
+    }
+
+    /**
+     * Constructs a new title packet from a clear or reset action.
+     *
+     * @param action the action
+     * @throws IllegalArgumentException if the action is not {@link Action#RESET},
+     * or {@link Action#HIDE}
+     */
+    public TitlePacket(@NotNull Action action) {
+        this.action = action;
+    }
+
+    /**
+     * Constructs a new title packet for {@link Action#SET_TIMES_AND_DISPLAY}.
+     *
+     * @param fadeIn the fade in time
+     * @param stay the stay time
+     * @param fadeOut the fade out time
+     */
+    public TitlePacket(int fadeIn, int stay, int fadeOut) {
+        this.action = Action.SET_TIMES_AND_DISPLAY;
+        this.fadeIn = fadeIn;
+        this.stay = stay;
+        this.fadeOut = fadeOut;
     }
 
     @Override
@@ -34,13 +79,9 @@ public class TitlePacket implements ServerPacket {
 
         switch (action) {
             case SET_TITLE:
-                writer.writeSizedString(titleText.toString());
-                break;
             case SET_SUBTITLE:
-                writer.writeSizedString(subtitleText.toString());
-                break;
             case SET_ACTION_BAR:
-                writer.writeSizedString(actionBarText.toString());
+                writer.writeComponent(payload);
                 break;
             case SET_TIMES_AND_DISPLAY:
                 writer.writeInt(fadeIn);
@@ -58,15 +99,9 @@ public class TitlePacket implements ServerPacket {
         action = Action.values()[reader.readVarInt()];
         switch (action) {
             case SET_TITLE:
-                titleText = reader.readJsonMessage(Integer.MAX_VALUE);
-                break;
-
             case SET_SUBTITLE:
-                subtitleText = reader.readJsonMessage(Integer.MAX_VALUE);
-                break;
-
             case SET_ACTION_BAR:
-                actionBarText = reader.readJsonMessage(Integer.MAX_VALUE);
+                payload = reader.readComponent(Integer.MAX_VALUE);
                 break;
 
             case SET_TIMES_AND_DISPLAY:
@@ -85,6 +120,24 @@ public class TitlePacket implements ServerPacket {
         return ServerPacketIdentifier.TITLE;
     }
 
+    @Override
+    public @NotNull Collection<Component> components() {
+        if (action == Action.SET_TITLE || action == Action.SET_SUBTITLE || action == Action.SET_ACTION_BAR) {
+            return Collections.singleton(payload);
+        } else {
+            return Collections.emptyList();
+        }
+    }
+
+    @Override
+    public @NotNull ServerPacket copyWithOperator(@NotNull UnaryOperator<Component> operator) {
+        if (action == Action.SET_TITLE || action == Action.SET_SUBTITLE || action == Action.SET_ACTION_BAR) {
+            return new TitlePacket(action, operator.apply(payload));
+        } else {
+            return this;
+        }
+    }
+
     public enum Action {
         SET_TITLE,
         SET_SUBTITLE,
@@ -94,4 +147,27 @@ public class TitlePacket implements ServerPacket {
         RESET
     }
 
+    /**
+     * Creates a collection of title packets from an Adventure title.
+     *
+     * @param title the title
+     * @return the packets
+     */
+    public static Collection<TitlePacket> of(Title title) {
+        List<TitlePacket> packets = new ArrayList<>(4);
+
+        // base packets
+        packets.add(new TitlePacket(Action.SET_TITLE, title.title()));
+        packets.add(new TitlePacket(Action.SET_SUBTITLE, title.subtitle()));
+
+        // times packet
+        Title.Times times = title.times();
+        if (times != null) {
+            packets.add(new TitlePacket(TickUtils.fromDuration(times.fadeIn(), TickUtils.CLIENT_TICK_MS),
+                    TickUtils.fromDuration(times.stay(), TickUtils.CLIENT_TICK_MS),
+                    TickUtils.fromDuration(times.fadeOut(), TickUtils.CLIENT_TICK_MS)));
+        }
+
+        return packets;
+    }
 }
