@@ -1,9 +1,11 @@
 package demo;
 
+import com.google.common.util.concurrent.AtomicDouble;
 import demo.blocks.BurningTorchBlock;
 import demo.blocks.CustomBlockSample;
 import demo.blocks.UpdatableBlockDemo;
 import demo.commands.*;
+import net.kyori.adventure.key.Key;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.format.NamedTextColor;
 import net.kyori.adventure.text.format.TextColor;
@@ -14,6 +16,9 @@ import net.minestom.server.event.server.ServerListPingEvent;
 import net.minestom.server.extras.lan.OpenToLAN;
 import net.minestom.server.extras.lan.OpenToLANConfig;
 import net.minestom.server.extras.optifine.OptifineSupport;
+import net.minestom.server.extras.placeholder.PlaceholderResult;
+import net.minestom.server.extras.placeholder.Placeholders;
+import net.minestom.server.extras.placeholder.component.PlaceholderComponent;
 import net.minestom.server.instance.block.BlockManager;
 import net.minestom.server.instance.block.rule.vanilla.RedstonePlacementRule;
 import net.minestom.server.ping.ResponseData;
@@ -22,8 +27,15 @@ import net.minestom.server.storage.systems.FileStorageSystem;
 import net.minestom.server.utils.identity.NamedAndIdentified;
 import net.minestom.server.utils.time.TimeUnit;
 import net.minestom.server.utils.time.UpdateOption;
+import org.jetbrains.annotations.NotNull;
+
+import java.util.Collections;
+import java.util.concurrent.ThreadLocalRandom;
+import java.util.concurrent.atomic.AtomicLong;
 
 public class Main {
+
+    private static AtomicLong startTime;
 
     public static void main(String[] args) {
         MinecraftServer minecraftServer = MinecraftServer.init();
@@ -54,6 +66,7 @@ public class Main {
         commandManager.register(new SummonCommand());
         commandManager.register(new RemoveCommand());
         commandManager.register(new GiveCommand());
+        commandManager.register(new PlaceholderCommand());
 
         commandManager.setUnknownCommandCallback((sender, command) -> sender.sendMessage(Component.text("Unknown command", NamedTextColor.RED)));
 
@@ -101,13 +114,22 @@ public class Main {
 
         //VelocityProxy.enable("rBeJJ79W4MVU");
         //BungeeCordProxy.enable();
+        Placeholders.registerPlaceholder(Key.key("minestom:server.port"), placeholder -> PlaceholderResult.parsed(placeholder, Component.text(MinecraftServer.getNettyServer().getPort())));
+        Placeholders.registerPlaceholder(Key.key("minestom:server.uptime"), Main::parseUptime);
 
         //MojangAuth.init();
 
         // useful for testing - we don't need to worry about event calls so just set this to a long time
         OpenToLAN.open(new OpenToLANConfig().eventCallDelay(new UpdateOption(1, TimeUnit.DAY)));
-
+        startTime = new AtomicLong(System.currentTimeMillis());
         minecraftServer.start("0.0.0.0", 25565);
         //Runtime.getRuntime().addShutdownHook(new Thread(MinecraftServer::stopCleanly));
+    }
+
+    private static @NotNull PlaceholderResult parseUptime(PlaceholderComponent component) {
+        if (ThreadLocalRandom.current().nextBoolean()) {
+            return PlaceholderResult.error(component, Collections.emptyList());
+        }
+        return PlaceholderResult.parsed(component, Collections.singletonList(Component.text(System.currentTimeMillis() - startTime.get())));
     }
 }
