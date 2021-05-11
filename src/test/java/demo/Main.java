@@ -1,6 +1,5 @@
 package demo;
 
-import com.google.common.util.concurrent.AtomicDouble;
 import demo.blocks.BurningTorchBlock;
 import demo.blocks.CustomBlockSample;
 import demo.blocks.UpdatableBlockDemo;
@@ -114,9 +113,8 @@ public class Main {
 
         //VelocityProxy.enable("rBeJJ79W4MVU");
         //BungeeCordProxy.enable();
-        Placeholders.registerPlaceholder(Key.key("minestom:server.port"), placeholder -> PlaceholderResult.parsed(placeholder, Component.text(MinecraftServer.getNettyServer().getPort())));
+        Placeholders.registerPlaceholder(Key.key("minestom:server.port"), placeholder -> PlaceholderResult.parsed(Component.text(MinecraftServer.getNettyServer().getPort())));
         Placeholders.registerPlaceholder(Key.key("minestom:server.uptime"), Main::parseUptime);
-
         //MojangAuth.init();
 
         // useful for testing - we don't need to worry about event calls so just set this to a long time
@@ -128,8 +126,8 @@ public class Main {
 
     private static @NotNull PlaceholderResult parseUptime(PlaceholderComponent component) {
         if (ThreadLocalRandom.current().nextBoolean()) {
-            return PlaceholderResult.error(component, Collections.emptyList());
+            return PlaceholderResult.error(Collections.emptyList());
         }
-        return PlaceholderResult.parsed(component, Collections.singletonList(Component.text(System.currentTimeMillis() - startTime.get())));
+        return PlaceholderResult.parsed(Collections.singletonList(Component.text(System.currentTimeMillis() - startTime.get())));
     }
 }

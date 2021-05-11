@@ -19,7 +19,7 @@ final class PlaceholderComponentBuilderImpl implements PlaceholderComponent.Buil
 
 
     private @NotNull Key placeholderKey;
-    private @NotNull List<Component> placeholderArguments;
+    private @NotNull final List<Component> placeholderArguments;
     private @NotNull PlaceholderResultParser successParser;
     private @NotNull PlaceholderResultParser errorParser;
     private @NotNull PlaceholderResultParser unknownParser;
