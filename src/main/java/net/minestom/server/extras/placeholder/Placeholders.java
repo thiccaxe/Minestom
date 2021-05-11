@@ -30,9 +30,13 @@ public class Placeholders {
     }
 
     public static Component setPlaceholder(PlaceholderComponent placeholderComponent) {
-        PlaceholderResult placeholderResult = PlaceholderResult.unknown().finalise(placeholderComponent);
+        FinalPlaceholderResult placeholderResult = PlaceholderResult.unknown().finalise(placeholderComponent);
         if (placeholderRegistered(placeholderComponent.key())) {
-            placeholderResult = registeredPlaceholders.get(placeholderComponent.key()).getParser().set(placeholderComponent).finalise(placeholderComponent);
+            try {
+                placeholderResult = registeredPlaceholders.get(placeholderComponent.key()).getParser().set(placeholderComponent).finalise(placeholderComponent);
+            } catch (Exception e) {
+                placeholderResult = PlaceholderResult.error().finalise(placeholderComponent);
+            }
         }
         return placeholderComponent.set(placeholderResult);
     }

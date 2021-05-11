@@ -2,24 +2,23 @@ package net.minestom.server.extras.placeholder.component;
 
 import net.kyori.adventure.key.Key;
 import net.kyori.adventure.text.Component;
+import net.minestom.server.extras.placeholder.PlaceholderResult;
 import org.jetbrains.annotations.NotNull;
-import org.jetbrains.annotations.Unmodifiable;
 
 import javax.annotation.ParametersAreNonnullByDefault;
 import java.util.ArrayList;
 import java.util.List;
 
 final class PlaceholderComponentBuilderImpl implements PlaceholderComponent.Builder{
-
-    private static final PlaceholderResultParser SUCCESS_PARSER = result -> Component.join(Component.text(" "), result.getValues());
-    private static final PlaceholderResultParser ERROR_PARSER = result -> Component.text("Error: ").append(Component.join(Component.text(" "), result.getValues()));
+    private static final PlaceholderResultParser SUCCESS_PARSER = result -> Component.join(Component.text(" "), PlaceholderResult.toComponentList(result.getValues()));
+    private static final PlaceholderResultParser ERROR_PARSER = result -> Component.text("Error: ").append(Component.join(Component.text(" "), PlaceholderResult.toComponentList(result.getValues())));
     private static final PlaceholderResultParser UNKNOWN_PARSER = result -> Component.text(result.getPlaceholder().key().value() + ": ")
-            .append(Component.join(Component.text(" "), result.getValues()));
+            .append(Component.join(Component.text(" "), PlaceholderResult.toComponentList(result.getValues())));
 
 
 
     private @NotNull Key placeholderKey;
-    private @NotNull final List<Component> placeholderArguments;
+    private @NotNull final List<Object> placeholderArguments;
     private @NotNull PlaceholderResultParser successParser;
     private @NotNull PlaceholderResultParser errorParser;
     private @NotNull PlaceholderResultParser unknownParser;
@@ -27,7 +26,7 @@ final class PlaceholderComponentBuilderImpl implements PlaceholderComponent.Buil
 
     @ParametersAreNonnullByDefault
     private PlaceholderComponentBuilderImpl(Key placeholderKey,
-                                     List<Component> placeholderArguments,
+                                     List<Object> placeholderArguments,
                                      PlaceholderResultParser successParser,
                                      PlaceholderResultParser errorParser,
                                      PlaceholderResultParser unknownParser
@@ -58,19 +57,19 @@ final class PlaceholderComponentBuilderImpl implements PlaceholderComponent.Buil
     }
 
     @Override
-    public @NotNull PlaceholderComponent.Builder argument(@NotNull Component placeholderArgument) {
+    public @NotNull PlaceholderComponent.Builder argument(@NotNull Object placeholderArgument) {
         this.placeholderArguments.add(placeholderArgument);
         return this;
     }
 
     @Override
-    public @NotNull PlaceholderComponent.Builder arguments(@NotNull List<Component> placeholderArguments) {
+    public @NotNull PlaceholderComponent.Builder arguments(@NotNull List<Object> placeholderArguments) {
         this.placeholderArguments.addAll(placeholderArguments);
         return this;
     }
 
     @Override
-    public @NotNull PlaceholderComponent.Builder arguments(@NotNull Component @NotNull ... placeholderArguments) {
+    public @NotNull PlaceholderComponent.Builder arguments(@NotNull Object @NotNull ... placeholderArguments) {
         this.placeholderArguments.addAll(List.of(placeholderArguments));
         return this;
     }

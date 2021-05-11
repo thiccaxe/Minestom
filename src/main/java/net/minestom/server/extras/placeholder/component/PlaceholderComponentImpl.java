@@ -3,6 +3,7 @@ package net.minestom.server.extras.placeholder.component;
 
 import net.kyori.adventure.key.Key;
 import net.kyori.adventure.text.Component;
+import net.minestom.server.extras.placeholder.FinalPlaceholderResult;
 import net.minestom.server.extras.placeholder.PlaceholderResult;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Unmodifiable;
@@ -13,14 +14,14 @@ import java.util.List;
 final class PlaceholderComponentImpl implements PlaceholderComponent {
 
     private final @NotNull Key placeholderKey;
-    private final @NotNull @Unmodifiable List<Component> placeholderArguments;
+    private final @NotNull @Unmodifiable List<Object> placeholderArguments;
     private final @NotNull PlaceholderResultParser successParser;
     private final @NotNull PlaceholderResultParser errorParser;
     private final @NotNull PlaceholderResultParser unknownParser;
 
     @ParametersAreNonnullByDefault
     PlaceholderComponentImpl(Key placeholderKey,
-                             @Unmodifiable List<Component> placeholderArguments,
+                             @Unmodifiable List<Object> placeholderArguments,
                              PlaceholderResultParser successParser,
                              PlaceholderResultParser errorParser,
                              PlaceholderResultParser unknownParser
@@ -39,22 +40,22 @@ final class PlaceholderComponentImpl implements PlaceholderComponent {
     }
 
     @Override
-    public @NotNull @Unmodifiable List<Component> arguments() {
+    public @NotNull @Unmodifiable List<Object> arguments() {
         return placeholderArguments;
     }
 
     @Override
-    public @NotNull Component success(@NotNull PlaceholderResult result) {
+    public @NotNull Component success(@NotNull FinalPlaceholderResult result) {
         return successParser.parse(result);
     }
 
     @Override
-    public @NotNull Component error(@NotNull PlaceholderResult result) {
+    public @NotNull Component error(@NotNull FinalPlaceholderResult result) {
         return errorParser.parse(result);
     }
 
     @Override
-    public @NotNull Component unknown(@NotNull PlaceholderResult result) {
+    public @NotNull Component unknown(@NotNull FinalPlaceholderResult result) {
         return unknownParser.parse(result);
     }
 

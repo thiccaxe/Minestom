@@ -11,7 +11,7 @@ public final class FinalPlaceholderResult extends PlaceholderResult {
 
     private final @NotNull PlaceholderComponent placeholder;
 
-    FinalPlaceholderResult(@NotNull PlaceholderResult.ResultType resultType, @NotNull @Unmodifiable List<Component> values, @NotNull PlaceholderComponent placeholder) {
+    FinalPlaceholderResult(@NotNull PlaceholderResult.ResultType resultType, @NotNull @Unmodifiable List<Object> values, @NotNull PlaceholderComponent placeholder) {
         super(resultType, values);
         this.placeholder = placeholder;
     }

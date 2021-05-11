@@ -20,13 +20,13 @@ public class PlaceholderCommand extends Command {
             if (context.get(test)) {
                 sender.sendMessage(Placeholders.setPlaceholder(PlaceholderComponent.builder(Key.key("minestom:server.port"))
                         .resultError(result -> Component.text("???", NamedTextColor.RED, TextDecoration.BOLD))
-                        .resultSuccess(result -> result.getValues().get(0).style(Style.style(NamedTextColor.YELLOW)))
+                        .resultSuccess(result -> ((Component)result.getValues().get(0)).style(Style.style(NamedTextColor.YELLOW)))
                         .resultUnknown(result -> Component.text(25565, NamedTextColor.YELLOW))
                         .build()));
             } else {
                 sender.sendMessage(Placeholders.setPlaceholder(PlaceholderComponent.builder(Key.key("minestom:server.uptime"))
                         .resultError(result -> Component.text("Error", NamedTextColor.RED, TextDecoration.ITALIC))
-                        .resultSuccess(result -> result.getValues().get(0).style(Style.style(NamedTextColor.GREEN, TextDecoration.BOLD)))
+                        .resultSuccess(result -> ((Component)result.getValues().get(0)).style(Style.style(NamedTextColor.GREEN, TextDecoration.BOLD)))
                         .build()));
             }
         }, test);

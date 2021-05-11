@@ -7,6 +7,7 @@ import net.kyori.adventure.text.event.HoverEventSource;
 import net.kyori.adventure.text.format.Style;
 import net.kyori.adventure.text.format.TextColor;
 import net.kyori.adventure.text.format.TextDecoration;
+import net.minestom.server.extras.placeholder.FinalPlaceholderResult;
 import net.minestom.server.extras.placeholder.PlaceholderResult;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
@@ -33,7 +34,7 @@ public interface PlaceholderComponent extends BuildableComponent<PlaceholderComp
      *
      * @return the arguments
      */
-    @NotNull List<Component> arguments();
+    @NotNull List<Object> arguments();
 
     /**
      * Get the component this should be replaced with on a successful parse.
@@ -42,7 +43,7 @@ public interface PlaceholderComponent extends BuildableComponent<PlaceholderComp
      *
      * @return the component to replace this with
      */
-    @NotNull Component success(@NotNull PlaceholderResult result);
+    @NotNull Component success(@NotNull FinalPlaceholderResult result);
 
     /**
      * Get the component this should be replaced with on a parse with error.
@@ -51,7 +52,7 @@ public interface PlaceholderComponent extends BuildableComponent<PlaceholderComp
      *
      * @return the component to replace this with
      */
-    @NotNull Component error(@NotNull PlaceholderResult result);
+    @NotNull Component error(@NotNull FinalPlaceholderResult result);
 
     /**
      * Get the component this should be replaced with when the Key is not registered.
@@ -60,9 +61,9 @@ public interface PlaceholderComponent extends BuildableComponent<PlaceholderComp
      *
      * @return the component to replace this with
      */
-    @NotNull Component unknown(@NotNull PlaceholderResult result);
+    @NotNull Component unknown(@NotNull FinalPlaceholderResult result);
 
-    default @NotNull Component set(@NotNull PlaceholderResult result) {
+    default @NotNull Component set(@NotNull FinalPlaceholderResult result) {
         switch (result.getResultType()) {
             default:
             case SUCCESS:
@@ -126,11 +127,11 @@ public interface PlaceholderComponent extends BuildableComponent<PlaceholderComp
 
         @NotNull PlaceholderComponent.Builder key(@NotNull Key placeholderKey);
 
-        @NotNull PlaceholderComponent.Builder argument(@NotNull Component placeholderArgument);
+        @NotNull PlaceholderComponent.Builder argument(@NotNull Object placeholderArgument);
 
-        @NotNull PlaceholderComponent.Builder arguments(@NotNull List<Component> placeholderArguments);
+        @NotNull PlaceholderComponent.Builder arguments(@NotNull List<Object> placeholderArguments);
 
-        @NotNull PlaceholderComponent.Builder arguments(@NotNull Component @NotNull... placeholderArguments);
+        @NotNull PlaceholderComponent.Builder arguments(@NotNull Object @NotNull... placeholderArguments);
 
         @NotNull PlaceholderComponent.Builder clearArguments();
 
