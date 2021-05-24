@@ -71,6 +71,7 @@ public class ResponseData {
     public void setVersion(Component version) {
         this.version = LegacyComponentSerializer.legacySection().serialize(version);
     }
+    
     /**
      * Get the version name for the response.
      *
