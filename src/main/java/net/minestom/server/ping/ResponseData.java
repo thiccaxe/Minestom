@@ -62,7 +62,15 @@ public class ResponseData {
     public void setVersion(String version) {
         this.version = version;
     }
-
+    
+    /**
+     * Sets the version name for the response, serializing the component to a string using legacy sections.
+     *
+     * @param version The version name for the response data.
+    */
+    public void setVersion(Component version) {
+        this.version = LegacyComponentSerializer.legacySection().serialize(version);
+    }
     /**
      * Get the version name for the response.
      *
